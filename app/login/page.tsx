@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+import { setCookie } from "@/lib/cookies";
 import { api } from "@/lib/axios";
+import { parseJwt } from "@/lib/jwt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,6 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +30,23 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Mock logic until API is fully ready, or if API works:
-      // const response = await api.post("/auth/login", { email, senha });
-      // login(response.data.token, response.data.userBase64);
+      // Real API authentication call
+      const response = await api.post("/auth/login", { email, senha });
+      const token = response.data.data?.accessToken || response.data.accessToken;
       
-      // Temporary Mock:
-      setTimeout(() => {
-        login("mock-jwt-token-7483748923");
-      }, 1000);
+      if (token) {
+         setCookie("access_token", token, 7);
+         const decoded = parseJwt(token);
+         
+         // Branch navigation based on Role
+         if (decoded?.role === "SUPER_ADMIN") {
+             window.location.href = "/admin";
+         } else {
+             window.location.href = "/dashboard";
+         }
+      } else {
+         throw new Error("Formato de token inválido");
+      }
 
     } catch (err: any) {
       setError(err.response?.data?.message || "Erro ao realizar login. Verifique suas credenciais.");

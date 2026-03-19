@@ -4,43 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  LayoutDashboard, 
-  Wallet, 
-  Tags, 
-  ArrowLeftRight, 
-  CreditCard,
-  Users,
+  Building2, 
+  Settings, 
   LogOut,
   Menu,
   X,
-  Building
+  CreditCard,
+  LayoutDashboard
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { deleteCookie } from "@/lib/cookies";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Contas", href: "/contas", icon: Wallet },
-  { name: "Categorias", href: "/categorias", icon: Tags },
-  { name: "Lançamentos", href: "/lancamentos", icon: ArrowLeftRight },
-  { name: "Cartões", href: "/cartoes", icon: CreditCard },
-  { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
+  { name: "Visão Global", href: "/admin", icon: LayoutDashboard },
+  { name: "Gerenciar Tenants", href: "/admin/tenants", icon: Building2 },
+  { name: "Planos SaaS", href: "/admin/planos", icon: CreditCard },
+  { name: "Configurações", href: "/admin/configuracoes", icon: Settings },
 ];
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const { user, isLoading, logout } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex text-foreground items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-          <p className="text-muted-foreground neon-text animate-pulse">Carregando Sessão SaaS...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    deleteCookie("access_token");
+    deleteCookie("refresh_token");
+    window.location.href = "/login";
+  };
 
   return (
     <div className="min-h-screen bg-background flex text-foreground">
@@ -54,14 +43,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 glass-panel border-r border-border/40 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 bg-black/50 backdrop-blur-xl border-r border-[#Eab308]/30 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="h-full flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center px-6 mb-8">
             <div className="flex items-center justify-between w-full">
-              <span className="text-xl font-bold neon-text tracking-wider">GESTÃO SAAS</span>
+              <span className="text-xl font-bold tracking-wider text-[#Eab308] drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">SaaS ADMIN</span>
               <button 
                 onClick={() => setSidebarOpen(false)}
                 className="lg:hidden text-muted-foreground hover:text-foreground"
@@ -73,20 +62,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           <nav className="mt-5 flex-1 px-4 space-y-2 relative">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-all duration-200 ${
                     isActive
-                      ? "bg-primary/20 text-primary border border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                      ? "bg-[#Eab308]/20 text-[#Eab308] border border-[#Eab308]/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border/50 border border-transparent"
                   }`}
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 shrink-0 ${
-                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                      isActive ? "text-[#Eab308]" : "text-muted-foreground group-hover:text-foreground"
                     }`}
                     aria-hidden="true"
                   />
@@ -96,17 +85,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           
-          <div className="shrink-0 flex border-t border-border/40 p-4 mt-auto">
+          <div className="shrink-0 flex border-t border-[#Eab308]/30 p-4 mt-auto">
             <div className="shrink-0 w-full group block">
               <div className="flex items-center">
                 <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">{user?.nome || "Usuário"}</p>
-                  <p className="text-xs font-medium text-muted-foreground truncate">{user?.email || "usuario@tenant.com"}</p>
+                  <p className="text-sm font-bold text-[#Eab308]">Super Administrador</p>
+                  <p className="text-xs font-medium text-muted-foreground">Master Control</p>
                 </div>
                 <button 
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10"
-                  title="Sair"
+                  title="Sair do SaaS"
                 >
                   <LogOut size={18} />
                 </button>
@@ -118,36 +107,35 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0">
-        <header className="shrink-0 h-16 glass-panel border-b border-border/40 items-center px-4 sm:px-6 lg:px-8 absolute top-0 w-full z-10 hidden sm:flex">
+        <header className="shrink-0 h-16 bg-black/30 backdrop-blur-md border-b border-[#Eab308]/30 items-center px-4 sm:px-6 lg:px-8 absolute top-0 w-full z-10 hidden sm:flex">
           <div className="flex-1 flex justify-between items-center h-full">
              <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
+              className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground"
              >
-                <span className="sr-only">Open sidebar</span>
                 <Menu size={24} aria-hidden="true" />
              </button>
              <div className="flex-1 flex items-center justify-end">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary mr-4 shadow-[0_0_10px_rgba(var(--primary),0.1)]">
-                   <Building size={14} />
-                   <span className="text-sm font-medium tracking-wide">Tenant: {user?.tenantName || "Demo SaaS"}</span>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#Eab308]/10 border border-[#Eab308]/30 text-[#Eab308] mr-4 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
+                   <Building2 size={14} />
+                   <span className="text-sm font-medium tracking-wide">ÁREA RESTRITA SaaS</span>
                 </div>
              </div>
           </div>
         </header>
 
-        {/* Mobile header (outside the hidden toggle) */}
-        <div className="sm:hidden flex items-center justify-between glass-panel border-b border-border/40 px-4 py-3 z-10">
-            <span className="text-lg font-bold neon-text">GESTÃO SAAS</span>
+        {/* Mobile header */}
+        <div className="sm:hidden flex items-center justify-between bg-black/50 backdrop-blur-md border-b border-[#Eab308]/30 px-4 py-3 z-10">
+            <span className="text-lg font-bold text-[#Eab308] drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">SaaS ADMIN</span>
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -mr-2 text-muted-foreground hover:text-foreground"
+              className="p-2 -mr-2 text-[#Eab308] hover:text-white"
             >
               <Menu size={24} />
             </button>
         </div>
 
-        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none pt-4 sm:pt-20 pb-10 px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none pt-4 sm:pt-20 pb-10 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-black">
             <div className="max-w-7xl mx-auto">
                 {children}
             </div>

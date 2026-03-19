@@ -151,7 +151,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground dark antialiased;
+    @apply bg-background text-foreground antialiased;
     /* Optional: Sublt radial gradient for pure minority report vibe */
     background-image: radial-gradient(circle at 50% -20%, oklch(0.25 0.05 250 / 0.4), transparent 70%);
     background-attachment: fixed;
