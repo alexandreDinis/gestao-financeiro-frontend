@@ -10,7 +10,7 @@ import { useCreateTransacao, useCreateTransacaoRecorrente } from "@/hooks/use-tr
 import { useCartoesQuery } from "@/features/cartoes/hooks/use-cartoes-query";
 import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
 
-import { TipoTransacao, Conta, Categoria, ApiResponse } from "@/types";
+import { TipoTransacao, TipoConta, Conta, Categoria, ApiResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -302,34 +302,63 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
                       value={searchOrigem}
                       onValueChange={(val) => setSearchOrigem(val)}
                     />
-                    <CommandList>
-                      {contas.filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase())).length === 0 && (
-                        <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
-                      )}
-                      <CommandGroup>
-                        {contas
-                          .filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase()))
-                          .map((c) => (
-                            <div
-                              key={c.id}
-                              onClick={() => {
-                                field.onChange(c.id);
-                                setOpenOrigem(false);
-                                setSearchOrigem("");
-                              }}
-                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  field.value === c.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {c.nome}
-                            </div>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
+                      <CommandList>
+                        {contas.filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase())).length === 0 && (
+                          <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                        )}
+                        
+                        {/* Contas Bancárias */}
+                        <CommandGroup heading="Contas Bancárias">
+                          {contas
+                            .filter(c => c.tipo !== TipoConta.CARTAO_CREDITO)
+                            .filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase()))
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  field.onChange(c.id);
+                                  setOpenOrigem(false);
+                                  setSearchOrigem("");
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {c.nome}
+                              </div>
+                          ))}
+                        </CommandGroup>
+
+                        {/* Cartões de Crédito */}
+                        <CommandGroup heading="Cartões de Crédito">
+                          {contas
+                            .filter(c => c.tipo === TipoConta.CARTAO_CREDITO)
+                            .filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase()))
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  field.onChange(c.id);
+                                  setOpenOrigem(false);
+                                  setSearchOrigem("");
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {c.nome}
+                              </div>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
@@ -377,8 +406,37 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
                         {contas.filter(c => c.nome.toLowerCase().includes(searchDestino.toLowerCase())).length === 0 && (
                           <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
                         )}
-                        <CommandGroup>
+
+                        {/* Contas Bancárias */}
+                        <CommandGroup heading="Contas Bancárias">
                           {contas
+                            .filter(c => c.tipo !== TipoConta.CARTAO_CREDITO)
+                            .filter(c => c.nome.toLowerCase().includes(searchDestino.toLowerCase()))
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  field.onChange(c.id);
+                                  setOpenDestino(false);
+                                  setSearchDestino("");
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {c.nome}
+                              </div>
+                            ))}
+                        </CommandGroup>
+
+                        {/* Cartões de Crédito */}
+                        <CommandGroup heading="Cartões de Crédito">
+                          {contas
+                            .filter(c => c.tipo === TipoConta.CARTAO_CREDITO)
                             .filter(c => c.nome.toLowerCase().includes(searchDestino.toLowerCase()))
                             .map((c) => (
                               <div

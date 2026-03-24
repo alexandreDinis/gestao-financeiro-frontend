@@ -204,17 +204,19 @@ export default function ContasPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : !contas?.length ? (
+              ) : !contas?.filter(c => c.tipo !== TipoConta.CARTAO_CREDITO).length ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Wallet size={32} className="text-primary/40" />
-                      Nenhuma conta cadastrada. Clique em &quot;Nova Conta&quot; para começar.
+                      Nenhuma conta bancária cadastrada. Clique em &quot;Nova Conta&quot; para começar.
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                contas.map((conta) => (
+                contas
+                  .filter(c => c.tipo !== TipoConta.CARTAO_CREDITO)
+                  .map((conta) => (
                   <TableRow key={conta.id} className="border-border/20 hover:bg-white/5 transition-colors">
                     <TableCell className="font-medium text-white">
                       <div className="flex items-center gap-2">
@@ -302,7 +304,9 @@ export default function ContasPage() {
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent className="glass-panel border-border/40">
-                  {Object.values(TipoConta).map((tipo) => (
+                  {Object.values(TipoConta)
+                    .filter((tipo) => tipo !== TipoConta.CARTAO_CREDITO)
+                    .map((tipo) => (
                     <SelectItem key={tipo} value={tipo}>
                       <span className="flex items-center gap-2">
                         {TIPO_CONTA_ICONS[tipo]}

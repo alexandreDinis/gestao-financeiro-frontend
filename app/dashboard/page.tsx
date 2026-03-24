@@ -3,196 +3,106 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Wallet, 
-  CreditCard,
-  Activity
-} from "lucide-react";
+import { Activity } from "lucide-react";
+import { DashboardResponse } from "@/types";
+
+// V2 Components
+import { DashboardMetricCards } from "@/features/dashboard/components/DashboardMetricCards";
+import { DashboardFlowChart } from "@/features/dashboard/components/DashboardFlowChart";
+import { DashboardCategoryChart } from "@/features/dashboard/components/DashboardCategoryChart";
+import { DashboardAlerts } from "@/features/dashboard/components/DashboardAlerts";
+import { DashboardRecentTransactions } from "@/features/dashboard/components/DashboardRecentTransactions";
+import { DashboardBudgets } from "@/features/dashboard/components/DashboardBudgets";
+import { DashboardCreditCards } from "@/features/dashboard/components/DashboardCreditCards";
+import { DashboardProjection } from "@/features/dashboard/components/DashboardProjection";
 
 export default function DashboardPage() {
-  const { data: dashboardData, isLoading: loadingSummary } = useQuery({
-    queryKey: ["dashboard-summary"],
+  const { data: dashboard, isLoading } = useQuery<DashboardResponse>({
+    queryKey: ["dashboard-v2"],
     queryFn: async () => {
       const { data } = await api.get("/dashboard");
       return data.data;
     }
   });
 
-  const { data: transactionsPage, isLoading: loadingTx } = useQuery({
-    queryKey: ["dashboard-recent-tx"],
-    queryFn: async () => {
-      const { data } = await api.get("/transacoes?size=5&sort=data,desc");
-      return data.data; // Page object, typically has .content
-    }
-  });
-
-  const summary = dashboardData || {
-    saldoTotal: 0,
-    mesAtual: { receitas: 0, despesas: 0 },
-    contasAPagar: { total: 0 }
-  };
-
-  const recentTransactions = transactionsPage?.content || [];
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    }).format(value);
-  };
-
-  const formatDate = (dateStr: string) => {
-      if (!dateStr) return "";
-      const date = new Date(dateStr + "T12:00:00Z"); // Fix timezone offsets for strict ISO dates
-      return new Intl.DateTimeFormat("pt-BR").format(date);
-  };
-
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Dashboard</h1>
-          <p className="text-muted-foreground flex items-center gap-2">
-            <Activity size={18} className="text-primary" />
-            Visão geral financeira do mês atual
-          </p>
+      <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Financeiro Dashboard</h1>
+            <p className="text-muted-foreground flex items-center gap-2 text-sm">
+              <Activity size={16} className="text-primary" />
+              Visão geral de alta performance • V2
+            </p>
+          </div>
+          <div className="text-right hidden md:block">
+             <p className="text-xs text-muted-foreground uppercase tracking-widest">Data de Referência</p>
+             <p className="text-sm font-bold text-white">{new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</p>
+          </div>
         </div>
 
-        {/* Metric Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="glass-panel border-l-4 border-l-primary hover:-translate-y-1 transition-transform duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Em Contas</CardTitle>
-              <Wallet className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              {loadingSummary ? (
-                <Skeleton className="h-8 w-[120px] bg-white/10" />
-              ) : (
-                <div className="text-2xl font-bold text-white neon-text">{formatCurrency(summary.saldoTotal)}</div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">Saldo consolidado</p>
-            </CardContent>
-          </Card>
+        {/* 1. Alerts Section (Priority) */}
+        {dashboard?.alertas && dashboard.alertas.length > 0 && (
+            <DashboardAlerts alertas={dashboard.alertas} loading={isLoading} />
+        )}
 
-          <Card className="glass-panel border-l-4 border-l-green-500 hover:-translate-y-1 transition-transform duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Receitas (Mês)</CardTitle>
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              {loadingSummary ? (
-                <Skeleton className="h-8 w-[120px] bg-white/10" />
-              ) : (
-                <div className="text-2xl font-bold text-green-400">{formatCurrency(summary.mesAtual?.receitas || 0)}</div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">Acumulado no mês atual</p>
-            </CardContent>
-          </Card>
+        {/* 2. Projections Section */}
+        <DashboardProjection projecao={dashboard?.projecao} loading={isLoading} />
 
-          <Card className="glass-panel border-l-4 border-l-destructive hover:-translate-y-1 transition-transform duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas (Mês)</CardTitle>
-              <ArrowDownRight className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              {loadingSummary ? (
-                <Skeleton className="h-8 w-[120px] bg-white/10" />
-              ) : (
-                <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.mesAtual?.despesas || 0)}</div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">Acumulado no mês atual</p>
-            </CardContent>
-          </Card>
+        {/* 3. Metric Cards (Summary) */}
+        <DashboardMetricCards 
+          saldoTotal={dashboard?.saldoTotal || 0} 
+          mesAtual={dashboard?.mesAtual}
+          comparativo={dashboard?.comparativo} 
+          loading={isLoading} 
+        />
 
-          <Card className="glass-panel border-l-4 border-l-yellow-500 hover:-translate-y-1 transition-transform duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Faturas Abertas</CardTitle>
-              <CreditCard className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              {loadingSummary ? (
-                <Skeleton className="h-8 w-[120px] bg-white/10" />
-              ) : (
-                <div className="text-2xl font-bold text-yellow-400">{formatCurrency(summary.contasAPagar?.total || 0)}</div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">Total a pagar</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Two-column layout for charts / recent list */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* 4. Main Content Grid (Charts & Budgets) */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
           
-          {/* Chart Placeholder */}
-          <Card className="glass-panel col-span-4 h-[400px]">
-            <CardHeader>
-              <CardTitle>Fluxo de Caixa</CardTitle>
-              <CardDescription>Receitas vs Despesas (Visão Geral)</CardDescription>
-            </CardHeader>
-            <CardContent className="h-full flex items-center justify-center">
-               <div className="text-center text-muted-foreground flex flex-col items-center">
-                 <Activity size={48} className="text-primary/50 mb-4 animate-pulse" />
-                 <p>Gráfico de área será renderizado aqui com Recharts</p>
-                 <p className="text-sm">Implementação nas próximas fases</p>
-               </div>
-            </CardContent>
-          </Card>
+          {/* Charts Column */}
+          <div className="col-span-4 space-y-6">
+            <DashboardFlowChart data={dashboard?.fluxoCaixaSeisMeses || []} loading={isLoading} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DashboardCategoryChart data={dashboard?.gastosPorCategoria || []} loading={isLoading} />
+                <DashboardCreditCards cartoes={dashboard?.cartoes || []} loading={isLoading} />
+            </div>
+          </div>
 
-          {/* Recent Transactions */}
-          <Card className="glass-panel col-span-3 h-[400px] overflow-hidden flex flex-col">
-            <CardHeader>
-              <CardTitle>Últimas Movimentações</CardTitle>
-              <CardDescription>Transações recentes de todas as contas</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto pr-2">
-              {loadingTx ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <Skeleton className="h-10 w-10 rounded-full bg-white/10" />
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-full bg-white/10" />
-                        <Skeleton className="h-3 w-1/2 bg-white/10" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : recentTransactions.length > 0 ? (
-                <div className="space-y-4">
-                  {recentTransactions.map((tx: any) => (
-                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 hover:bg-black/40 border border-border/20 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full shrink-0 ${tx.tipo === 'RECEITA' ? 'bg-green-500/20 text-green-500' : 'bg-destructive/20 text-destructive'}`}>
-                          {tx.tipo === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-white truncate max-w-[150px] sm:max-w-[200px]">{tx.descricao}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{formatDate(tx.data)}</span>
-                            <span>•</span>
-                            <span className="truncate">{tx.categoria?.nome || 'Sem Categoria'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`font-bold ml-2 shrink-0 ${tx.tipo === 'RECEITA' ? 'text-green-400' : 'text-white'}`}>
-                        {tx.tipo === 'RECEITA' ? '+' : ''}{formatCurrency(tx.valor)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
-                  Nenhuma movimentação recente encontrada.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Secondary Column (Transactions & Budgets) */}
+          <div className="col-span-3 space-y-6">
+             <DashboardRecentTransactions 
+                recentes={dashboard?.ultimasTransacoes || []} 
+                proximos={dashboard?.proximosVencimentos?.proximos30Dias || []} 
+                loading={isLoading} 
+             />
+             <DashboardBudgets orcamentos={dashboard?.orcamentos || []} loading={isLoading} />
+          </div>
+
         </div>
+
+        {/* Footer info or Metas section if needed */}
+        {dashboard?.metas && dashboard.metas.length > 0 && (
+           <div className="mt-8 border-t border-white/5 pt-8">
+              <h3 className="text-lg font-bold text-white mb-4">Minhas Metas Financeiras</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                 {dashboard.metas.map((meta, i) => (
+                    <div key={i} className="glass-panel p-4 flex items-center justify-between border-l-4 border-primary/40">
+                       <div>
+                          <p className="text-sm font-bold text-white">{meta.nome}</p>
+                          <p className="text-xs text-muted-foreground">Status: {meta.atrasada ? 'Atrasada' : 'No prazo'}</p>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-sm font-bold text-primary">{meta.percentualConcluido.toFixed(0)}%</p>
+                          <p className="text-[10px] text-muted-foreground">R$ {meta.valorAtual.toLocaleString()}</p>
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        )}
       </div>
     </AppLayout>
   );

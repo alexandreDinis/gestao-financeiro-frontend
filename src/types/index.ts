@@ -167,3 +167,135 @@ export interface CategoriaRequest {
   icone?: string;
   categoriaPaiId?: number | null;
 }
+
+// ==========================================
+// DASHBOARD V2
+// ==========================================
+
+export interface SaldoConta {
+  id: number;
+  nome: string;
+  tipo: string;
+  saldo: number;
+}
+
+export interface ResumoMes {
+  receitas: number;
+  despesas: number;
+  saldo: number;
+}
+
+export interface ComparativoMes {
+  receitasMesAtual: number;
+  receitasMesAnterior: number;
+  variacaoReceitasPercent: number;
+  despesasMesAtual: number;
+  despesasMesAnterior: number;
+  variacaoDespesasPercent: number;
+}
+
+export interface ProjecaoMes {
+  diasDecorridos: number;
+  diasTotais: number;
+  receitasProjetadas: number;
+  despesasProjetadas: number;
+  saldoProjetado: number;
+}
+
+export interface GastoPorCategoria {
+  categoriaId: number;
+  nomeCategoria: string;
+  total: number;
+  percentualSobreTotal: number;
+}
+
+export interface FluxoMensal {
+  ano: number;
+  mes: number;
+  mesLabel: string;
+  receitas: number;
+  despesas: number;
+  saldo: number;
+}
+
+export interface UltimaTransacao {
+  id: number;
+  descricao: string;
+  valor: number;
+  tipo: string;
+  status: string;
+  data: string;
+  categoria: string;
+  conta: string;
+}
+
+export interface Vencimento {
+  transacaoId: number;
+  descricao: string;
+  valor: number;
+  dataVencimento: string;
+  diasRestantes: number;
+  conta: string;
+}
+
+export interface ProximosVencimentosDashboard {
+  proximos7Dias: Vencimento[];
+  proximos15Dias: Vencimento[];
+  proximos30Dias: Vencimento[];
+  totalVencer7Dias: number;
+  totalVencer30Dias: number;
+}
+
+export interface ResumoMeta {
+  id: number;
+  nome: string;
+  valorAlvo: number;
+  valorAtual: number;
+  percentualConcluido: number;
+  prazo: string;
+  atrasada: boolean;
+}
+
+export interface ResumoOrcamento {
+  orcamentoId: number;
+  categoria: string;
+  limite: number;
+  gasto: number;
+  disponivel: number;
+  percentualUtilizado: number;
+  estourado: boolean;
+}
+
+export interface ResumoCartao {
+  cartaoId: number;
+  nome: string;
+  limite: number;
+  utilizado: number;
+  disponivel: number;
+  percentualUtilizado: number;
+  faturaAtual: number;
+  proximoVencimento: string;
+}
+
+export interface AlertaDashboard {
+  tipo: string;
+  mensagem: string;
+  nivel: "INFO" | "AVISO" | "CRITICO";
+  score: number;
+}
+
+export interface DashboardResponse {
+  saldoTotal: number;
+  saldoPorConta: SaldoConta[];
+  mesAtual: ResumoMes;
+  comparativo: ComparativoMes;
+  projecao: ProjecaoMes;
+  gastosPorCategoria: GastoPorCategoria[];
+  fluxoCaixaSeisMeses: FluxoMensal[];
+  ultimasTransacoes: UltimaTransacao[];
+  proximosVencimentos: ProximosVencimentosDashboard;
+  metas: ResumoMeta[];
+  orcamentos: ResumoOrcamento[];
+  cartoes: ResumoCartao[];
+  alertas: AlertaDashboard[];
+}
