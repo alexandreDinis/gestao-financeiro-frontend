@@ -7,6 +7,7 @@ import { api } from "@/lib/axios";
 import { parseJwt } from "@/lib/jwt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { 
   Card, 
@@ -111,12 +112,11 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <Input 
+                  <PasswordInput 
                     id="password" 
-                    type="password" 
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     className="pl-10 bg-black/40 border-border/50 focus:border-primary/50 transition-colors"

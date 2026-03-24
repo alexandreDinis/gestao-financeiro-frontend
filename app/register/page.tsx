@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { 
   Card, 
@@ -140,12 +141,11 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="senha">Senha</Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <Input 
+                  <PasswordInput 
                     id="senha" 
-                    type="password" 
                     value={formData.senha}
                     onChange={handleChange}
                     className="pl-10 bg-black/40 border-border/50 focus:border-primary/50 transition-colors"

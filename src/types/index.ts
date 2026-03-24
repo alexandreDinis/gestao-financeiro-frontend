@@ -66,6 +66,24 @@ export enum DirecaoLancamento {
   DEBITO = "DEBITO",
   CREDITO = "CREDITO",
 }
+ 
+export type TipoDespesa = "FIXA" | "VARIAVEL";
+export type TipoRecorrencia = "FIXA" | "VARIAVEL";
+export type StatusRecorrencia = "ATIVA" | "PAUSADA" | "ENCERRADA";
+
+export interface Recorrencia {
+  id: number;
+  descricao: string;
+  valor: number;
+  diaVencimento: number;
+  tipo: TipoRecorrencia;
+  status: StatusRecorrencia;
+  dataInicio: string;
+  dataFim?: string | null;
+  categoria?: Categoria;
+  conta?: Conta;
+  createdAt: string;
+}
 
 export interface LancamentoResponse {
   id: number;
@@ -84,11 +102,15 @@ export interface TransacaoResponse {
   dataVencimento?: string;
   dataPagamento?: string;
   tipo: TipoTransacao;
+  tipoDespesa?: TipoDespesa;
   status: StatusTransacao;
   observacao?: string;
   categoria?: Categoria;
   lancamentos: LancamentoResponse[];
   createdAt: string;
+  geradoAutomaticamente: boolean;
+  recorrenciaId?: number;
+  referencia?: string; // YYYY-MM
 }
 
 export interface TransacaoRequest {
@@ -97,6 +119,7 @@ export interface TransacaoRequest {
   data: string; // ISO string 
   dataVencimento?: string | null;
   tipo: TipoTransacao;
+  tipoDespesa?: TipoDespesa | null;
   categoriaId?: number | null;
   contaOrigemId: number; // For Receita/Despesa, the primary account. For Transfer, the source account.
   contaDestinoId?: number | null; // Used only for transfers

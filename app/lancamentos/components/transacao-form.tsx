@@ -6,12 +6,15 @@ import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { NumericFormat } from "react-number-format";
-import { useCreateTransacao } from "@/hooks/use-transacoes";
+import { useCreateTransacao, useCreateTransacaoRecorrente } from "@/hooks/use-transacoes";
+import { useCartoesQuery } from "@/features/cartoes/hooks/use-cartoes-query";
+import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
 
 import { TipoTransacao, Conta, Categoria, ApiResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -19,7 +22,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 // 1. Zod Validation Schema
 const transacaoSchema = z.object({
@@ -28,10 +46,19 @@ const transacaoSchema = z.object({
   data: z.string().nonempty("Data é obrigatória"),
   dataVencimento: z.string().optional(),
   tipo: z.nativeEnum(TipoTransacao),
+  tipoDespesa: z.enum(["FIXA", "VARIAVEL"]).optional().nullable(),
   categoriaId: z.number().optional().nullable(),
-  contaOrigemId: z.number({ required_error: "Conta origem é obrigatória" }).min(1, "Selecione uma conta"),
+  contaOrigemId: z.number().min(1, "Selecione uma conta"),
   contaDestinoId: z.number().optional().nullable(),
   observacao: z.string().optional(),
+  
+  // Recurrence fields
+  isRecorrente: z.boolean().optional(),
+  periodicidade: z.enum(["DIARIA", "SEMANAL", "QUINZENAL", "MENSAL", "ANUAL"]).optional().nullable(),
+  dataFim: z.string().optional(),
+  
+  // Credit Card fields
+  parcelas: z.number().min(1).optional(),
 }).superRefine((data, ctx) => {
   if (data.tipo === TipoTransacao.TRANSFERENCIA && !data.contaDestinoId) {
     ctx.addIssue({
@@ -47,12 +74,21 @@ const transacaoSchema = z.object({
       path: ["categoriaId"],
     });
   }
+  if (data.isRecorrente && !data.periodicidade) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Periodicidade é obrigatória para transações recorrentes",
+      path: ["periodicidade"],
+    });
+  }
 });
 
 type TransacaoFormValues = z.infer<typeof transacaoSchema>;
 
 export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
   const createMutation = useCreateTransacao();
+  const createRecorrenteMutation = useCreateTransacaoRecorrente();
+  const compraCartaoMutation = useCompraCartaoMutation();
 
   // 2. Fetch dependencies (Contas & Categorias)
   const { data: fetchContas } = useQuery({
@@ -71,8 +107,11 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
     }
   });
 
+  const { data: fetchCartoes } = useCartoesQuery();
+
   const contas = fetchContas || [];
   const categorias = fetchCategorias || [];
+  const cartoes = fetchCartoes || [];
 
   // 3. React Hook Form
   const {
@@ -89,29 +128,75 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
       data: new Date().toISOString().split("T")[0],
       descricao: "",
       valor: 0,
+      isRecorrente: false,
     },
   });
 
+  const [openOrigem, setOpenOrigem] = useState(false);
+  const [openDestino, setOpenDestino] = useState(false);
+  const [openCategoria, setOpenCategoria] = useState(false);
+
+  const [searchOrigem, setSearchOrigem] = useState("");
+  const [searchDestino, setSearchDestino] = useState("");
+  const [searchCategoria, setSearchCategoria] = useState("");
+
   const tipoSelecionado = watch("tipo");
+  const contaOrigemSelecionada = watch("contaOrigemId");
   const isTransferencia = tipoSelecionado === TipoTransacao.TRANSFERENCIA;
+  const isDespesa = tipoSelecionado === TipoTransacao.DESPESA;
+  const isRecorrente = watch("isRecorrente");
+  
+  const isCartao = cartoes.some(c => c.contaId === contaOrigemSelecionada);
 
   // 4. Submit Handler
   const onSubmit = async (data: TransacaoFormValues) => {
     try {
-      // Ensure nulls instead of undefined for backend
-      const payload = {
-        ...data,
-        categoriaId: isTransferencia ? null : data.categoriaId,
-        contaDestinoId: isTransferencia ? data.contaDestinoId : null,
-      };
-      
-      await createMutation.mutateAsync(payload);
+      const cartaoCorrespondente = cartoes.find(c => c.contaId === data.contaOrigemId);
+
+      if (data.isRecorrente) {
+        // Enviar para API de recorrências (Suporta agora Cartão ou Conta Normal)
+        const diaDoMes = new Date(data.data + "T12:00:00Z").getDate();
+        
+        const payload = {
+          descricao: data.descricao,
+          valor: data.valor,
+          tipo: data.tipo,
+          periodicidade: data.periodicidade,
+          dataInicio: data.data,
+          dataFim: data.dataFim || null,
+          diaVencimento: data.periodicidade === "MENSAL" || data.periodicidade === "ANUAL" ? diaDoMes : null,
+          categoriaId: isTransferencia ? null : data.categoriaId,
+          contaId: data.contaOrigemId,
+        };
+        await createRecorrenteMutation.mutateAsync(payload);
+      } else if (cartaoCorrespondente && isDespesa) {
+        // Enviar para API de Cartões (Faturas) - Apenas se NÃO for recorrente (Compras normais/parceladas)
+        await compraCartaoMutation.mutateAsync({
+           cartaoId: cartaoCorrespondente.id,
+           categoriaId: data.categoriaId!,
+           descricao: data.descricao,
+           valor: data.valor,
+           parcelas: data.parcelas || 1,
+           data: data.data,
+        });
+      } else {
+        // Enviar para API normal de transações
+        const payload = {
+          ...data,
+          tipoDespesa: isDespesa ? data.tipoDespesa : null,
+          categoriaId: isTransferencia ? null : data.categoriaId,
+          contaDestinoId: isTransferencia ? data.contaDestinoId : null,
+        };
+        await createMutation.mutateAsync(payload);
+      }
       reset();
       onSuccess();
     } catch (e) {
       console.error("Form error:", e);
     }
   };
+
+  const isSaving = isSubmitting || createMutation.isPending || createRecorrenteMutation.isPending || compraCartaoMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-4">
@@ -160,22 +245,22 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
             name="valor"
             control={control}
             render={({ field: { onChange, value } }) => (
-              <NumericFormat
-                value={value || ""}
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
-                decimalScale={2}
-                fixedDecimalScale
-                allowNegative={false}
-                onValueChange={(values) => onChange(values.floatValue || 0)}
-                customInput={Input}
-                className={`bg-black/40 text-lg font-medium border-border/50 ${
-                  tipoSelecionado === TipoTransacao.DESPESA ? 'text-red-400' :
-                  tipoSelecionado === TipoTransacao.RECEITA ? 'text-green-400' : 'text-blue-400'
-                } ${errors.valor ? 'border-red-500/50' : ''}`}
-                placeholder="R$ 0,00"
-              />
+               <NumericFormat
+                 value={value || ""}
+                 thousandSeparator="."
+                 decimalSeparator=","
+                 prefix="R$ "
+                 decimalScale={2}
+                 fixedDecimalScale
+                 allowNegative={false}
+                 onValueChange={(values) => onChange(values.floatValue || 0)}
+                 customInput={Input}
+                 className={`bg-black/40 text-lg font-medium border-border/50 ${
+                   tipoSelecionado === TipoTransacao.DESPESA ? 'text-red-400' :
+                   tipoSelecionado === TipoTransacao.RECEITA ? 'text-green-400' : 'text-blue-400'
+                 } ${errors.valor ? 'border-red-500/50' : ''}`}
+                 placeholder="R$ 0,00"
+               />
             )}
           />
           {errors.valor && <p className="text-red-400 text-xs mt-1">{errors.valor.message}</p>}
@@ -192,16 +277,62 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
             name="contaOrigemId"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString() || ""}>
-                <SelectTrigger className={`bg-black/40 border-border/50 ${errors.contaOrigemId ? 'border-red-500/50' : ''}`}>
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent className="glass-panel border-border/40 max-h-[200px]">
-                  {contas.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openOrigem} onOpenChange={setOpenOrigem}>
+                <PopoverTrigger>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between bg-black/40 border-border/50 font-normal hover:bg-black/50",
+                      !field.value && "text-muted-foreground",
+                      errors.contaOrigemId && "border-red-500/50"
+                    )}
+                  >
+                    {field.value
+                      ? contas.find((c) => c.id === field.value)?.nome
+                      : "Selecione a conta"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 glass-panel border-border/40">
+                  <Command className="bg-transparent" shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Buscar conta..." 
+                      className="h-9" 
+                      value={searchOrigem}
+                      onValueChange={(val) => setSearchOrigem(val)}
+                    />
+                    <CommandList>
+                      {contas.filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase())).length === 0 && (
+                        <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                      )}
+                      <CommandGroup>
+                        {contas
+                          .filter(c => c.nome.toLowerCase().includes(searchOrigem.toLowerCase()))
+                          .map((c) => (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                field.onChange(c.id);
+                                setOpenOrigem(false);
+                                setSearchOrigem("");
+                              }}
+                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === c.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {c.nome}
+                            </div>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             )}
           />
           {errors.contaOrigemId && <p className="text-red-400 text-xs mt-1">{errors.contaOrigemId.message}</p>}
@@ -217,16 +348,62 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
               name="contaDestinoId"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString() || ""}>
-                  <SelectTrigger className={`bg-black/40 border-border/50 ${errors.contaDestinoId ? 'border-red-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione a conta destino" />
-                  </SelectTrigger>
-                  <SelectContent className="glass-panel border-border/40 max-h-[200px]">
-                    {contas.map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={openDestino} onOpenChange={setOpenDestino}>
+                  <PopoverTrigger>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between bg-black/40 border-border/50 font-normal hover:bg-black/50",
+                        !field.value && "text-muted-foreground",
+                        errors.contaDestinoId && "border-red-500/50"
+                      )}
+                    >
+                      {field.value
+                        ? contas.find((c) => c.id === field.value)?.nome
+                        : "Selecione a conta destino"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 glass-panel border-border/40">
+                    <Command className="bg-transparent" shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Buscar conta..." 
+                        className="h-9" 
+                        value={searchDestino}
+                        onValueChange={(val) => setSearchDestino(val)}
+                      />
+                      <CommandList>
+                        {contas.filter(c => c.nome.toLowerCase().includes(searchDestino.toLowerCase())).length === 0 && (
+                          <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                        )}
+                        <CommandGroup>
+                          {contas
+                            .filter(c => c.nome.toLowerCase().includes(searchDestino.toLowerCase()))
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  field.onChange(c.id);
+                                  setOpenDestino(false);
+                                  setSearchDestino("");
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {c.nome}
+                              </div>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             />
           ) : (
@@ -235,16 +412,66 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
               name="categoriaId"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString() || ""}>
-                  <SelectTrigger className={`bg-black/40 border-border/50 ${errors.categoriaId ? 'border-red-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent className="glass-panel border-border/40 max-h-[200px]">
-                    {categorias.filter(c => c.tipo === tipoSelecionado).map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={openCategoria} onOpenChange={setOpenCategoria}>
+                  <PopoverTrigger>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between bg-black/40 border-border/50 font-normal hover:bg-black/50",
+                        !field.value && "text-muted-foreground",
+                        errors.categoriaId && "border-red-500/50"
+                      )}
+                    >
+                      {field.value
+                        ? categorias.find((c) => c.id === field.value)?.nome
+                        : "Selecione a categoria"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 glass-panel border-border/40">
+                    <Command className="bg-transparent" shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Buscar categoria..." 
+                        className="h-9" 
+                        value={searchCategoria}
+                        onValueChange={(val) => setSearchCategoria(val)}
+                      />
+                      <CommandList>
+                        {categorias
+                          .filter(c => c.tipo.toString() === tipoSelecionado.toString())
+                          .filter(c => c.nome.toLowerCase().includes(searchCategoria.toLowerCase()))
+                          .length === 0 && (
+                          <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                        )}
+                        <CommandGroup>
+                          {categorias
+                            .filter(c => c.tipo.toString() === tipoSelecionado.toString())
+                            .filter(c => c.nome.toLowerCase().includes(searchCategoria.toLowerCase()))
+                            .map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  field.onChange(c.id);
+                                  setOpenCategoria(false);
+                                  setSearchCategoria("");
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {c.nome}
+                              </div>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             />
           )}
@@ -253,12 +480,104 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
           {errors.categoriaId && !isTransferencia && <p className="text-red-400 text-xs mt-1">{errors.categoriaId.message}</p>}
         </div>
 
+        {/* Tipo de Despesa (Apenas para Despesas não recorrentes, ou deixamos para recorrentes tb) */}
+        {isDespesa && !isRecorrente && (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Comportamento do Gasto</Label>
+            <Controller
+              name="tipoDespesa"
+              control={control}
+              render={({ field }) => (
+                <div className="flex gap-3 mt-1">
+                  <label className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded border border-border/50 cursor-pointer transition-colors ${field.value === 'FIXA' ? 'bg-primary/20 border-primary/60 text-white' : 'bg-black/40 text-muted-foreground hover:bg-white/5'}`}>
+                    <input type="radio" value="FIXA" checked={field.value === 'FIXA'} onChange={() => field.onChange('FIXA')} className="sr-only" />
+                    <span className="font-medium text-sm">Fixa (Ex: Luz, Aluguel)</span>
+                  </label>
+                  <label className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded border border-border/50 cursor-pointer transition-colors ${field.value === 'VARIAVEL' ? 'bg-primary/20 border-primary/60 text-white' : 'bg-black/40 text-muted-foreground hover:bg-white/5'}`}>
+                    <input type="radio" value="VARIAVEL" checked={field.value === 'VARIAVEL'} onChange={() => field.onChange('VARIAVEL')} className="sr-only" />
+                    <span className="font-medium text-sm">Variável (Ex: Lanche, Roupa)</span>
+                  </label>
+                </div>
+              )}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Recurrence Checkbox */}
+      {!isTransferencia && (
+        <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-4">
+          <div className="flex items-center space-x-2">
+            <Controller
+              name="isRecorrente"
+              control={control}
+              render={({ field }) => (
+                <Checkbox 
+                  id="isRecorrente" 
+                  checked={field.value} 
+                  onCheckedChange={field.onChange} 
+                  className="border-primary/50 text-primary"
+                />
+              )}
+            />
+            <Label htmlFor="isRecorrente" className="cursor-pointer text-sm font-medium flex items-center gap-2">
+              <Repeat size={16} className="text-primary" />
+              Tornar este lançamento recorrente (ex: Assinaturas, Aluguel, Salário)
+            </Label>
+          </div>
+
+          {isRecorrente && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-primary/10">
+              <div className="space-y-2 relative">
+                <Label>Periodicidade</Label>
+                <Controller
+                  name="periodicidade"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <SelectTrigger className={`bg-black/40 border-border/50 ${errors.periodicidade ? 'border-red-500/50' : ''}`}>
+                        <SelectValue placeholder="Selecione a frequência">
+                          {field.value === "DIARIA" ? "Diariamente" :
+                           field.value === "SEMANAL" ? "Semanalmente" :
+                           field.value === "QUINZENAL" ? "Quinzenalmente" :
+                           field.value === "MENSAL" ? "Mensalmente" :
+                           field.value === "ANUAL" ? "Anualmente" : "Selecione a frequência"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="glass-panel border-border/40">
+                        <SelectItem value="DIARIA">Diariamente</SelectItem>
+                        <SelectItem value="SEMANAL">Semanalmente</SelectItem>
+                        <SelectItem value="QUINZENAL">Quinzenalmente</SelectItem>
+                        <SelectItem value="MENSAL">Mensalmente</SelectItem>
+                        <SelectItem value="ANUAL">Anualmente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.periodicidade && <p className="text-red-400 text-xs mt-1">{errors.periodicidade.message}</p>}
+              </div>
+
+              <div className="space-y-2 relative">
+                <Label htmlFor="dataFim">Data de Término (Opcional)</Label>
+                <div className="relative">
+                  <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="dataFim"
+                    type="date"
+                    className="bg-black/40 border-border/50 pl-10"
+                    {...register("dataFim")}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dates */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
          <div className="space-y-2 relative">
-            <Label htmlFor="data">Data do Lançamento</Label>
+            <Label htmlFor="data">{isRecorrente ? "Data do Primeiro Lançamento" : "Data do Lançamento"}</Label>
             <div className="relative">
               <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -271,18 +590,42 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
             {errors.data && <p className="text-red-400 text-xs mt-1">{errors.data.message}</p>}
          </div>
 
-         <div className="space-y-2 relative">
-            <Label htmlFor="dataVencimento">Vencimento (Opcional)</Label>
-            <div className="relative">
-              <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                id="dataVencimento"
-                type="date"
-                className="bg-black/40 border-border/50 pl-10"
-                {...register("dataVencimento")}
+         {!isRecorrente && !isCartao && (
+           <div className="space-y-2 relative">
+              <Label htmlFor="dataVencimento">Vencimento (Opcional)</Label>
+              <div className="relative">
+                <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="dataVencimento"
+                  type="date"
+                  className="bg-black/40 border-border/50 pl-10"
+                  {...register("dataVencimento")}
+                />
+              </div>
+           </div>
+         )}
+
+         {isCartao && !isRecorrente && (
+           <div className="space-y-2 relative">
+              <Label>Parcelamento no Cartão</Label>
+              <Controller
+                name="parcelas"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString() || "1"}>
+                    <SelectTrigger className="bg-black/40 border-border/50">
+                      <SelectValue placeholder="1x" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-panel border-border/40">
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map((n) => (
+                        <SelectItem key={n} value={n.toString()}>{n}x</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               />
-            </div>
-         </div>
+           </div>
+         )}
       </div>
 
       {/* Form Footer */}
@@ -297,10 +640,10 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
         </Button>
         <Button 
           type="submit" 
-          disabled={isSubmitting || createMutation.isPending}
-          className="bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(var(--primary),0.4)]"
+          disabled={isSaving}
+          className={`${isRecorrente ? 'bg-primary' : 'bg-primary'} hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(var(--primary),0.4)]`}
         >
-          {isSubmitting || createMutation.isPending ? "Salvando..." : "Salvar Lançamento"}
+          {isSaving ? "Salvando..." : (isRecorrente ? "Configurar Recorrência" : "Salvar Lançamento")}
         </Button>
       </div>
     </form>

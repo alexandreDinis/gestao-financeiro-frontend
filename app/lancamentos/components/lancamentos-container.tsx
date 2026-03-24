@@ -17,9 +17,13 @@ export function LancamentosContainer() {
   const filters = {
     mes: searchParams.get("mes") ? Number(searchParams.get("mes")) : new Date().getMonth() + 1,
     ano: searchParams.get("ano") ? Number(searchParams.get("ano")) : new Date().getFullYear(),
+    busca: searchParams.get("busca") || undefined,
     tipo: searchParams.get("tipo") || undefined,
     status: searchParams.get("status") || undefined,
-    // Add more URL params as needed
+    tipoDespesa: searchParams.get("tipoDespesa") || undefined,
+    origem: searchParams.get("origem") || undefined,
+    categoriaId: searchParams.get("categoriaId") ? Number(searchParams.get("categoriaId")) : undefined,
+    contaId: searchParams.get("contaId") ? Number(searchParams.get("contaId")) : undefined,
   };
 
   return (

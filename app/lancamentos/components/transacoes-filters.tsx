@@ -10,8 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter, Calendar } from "lucide-react";
-import { TipoTransacao, StatusTransacao } from "@/types";
+import { Search, Filter, Calendar, Building, Tag } from "lucide-react";
+import { TipoTransacao, StatusTransacao, TipoDespesa, Conta, Categoria, ApiResponse } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/axios";
 
 export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
   const router = useRouter();
@@ -29,6 +31,23 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Fetch options for filters
+  const { data: contas } = useQuery({
+    queryKey: ["contas"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Conta[]>>("/contas");
+      return data.data;
+    }
+  });
+
+  const { data: categorias } = useQuery({
+    queryKey: ["categorias"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Categoria[]>>("/categorias");
+      return data.data;
+    }
+  });
 
   const updateUrl = useCallback(
     (key: string, value: string | null) => {
@@ -81,13 +100,21 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
             value={searchParams.get("mes") || String(new Date().getMonth() + 1)}
             onValueChange={(val) => updateUrl("mes", val)}
           >
-            <SelectTrigger className="w-[140px] bg-black/40 border-border/50 h-10">
-              <SelectValue />
+            <SelectTrigger className="w-[150px] bg-black/40 border-border/50 h-10">
+              <SelectValue>
+                {[
+                  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                ][Number(searchParams.get("mes") || new Date().getMonth() + 1) - 1]}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="glass-panel border-border/40">
-              {Array.from({ length: 12 }).map((_, i) => (
+              {[
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+              ].map((month, i) => (
                 <SelectItem key={i + 1} value={String(i + 1)}>
-                  {new Date(0, i).toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())}
+                  {month}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -113,6 +140,25 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
           </Select>
         </div>
 
+        {/* Tipo de Despesa Filter (Only if Tipo is Despesa) */}
+        {searchParams.get("tipo") === TipoTransacao.DESPESA && (
+          <div className="flex items-center gap-2">
+            <Select
+              value={searchParams.get("tipoDespesa") || "ALL"}
+              onValueChange={(val) => updateUrl("tipoDespesa", val)}
+            >
+              <SelectTrigger className="w-[140px] bg-black/40 border-border/50 h-10">
+                <SelectValue placeholder="Comportamento" />
+              </SelectTrigger>
+              <SelectContent className="glass-panel border-border/40">
+                <SelectItem value="ALL">Fixo + Variável</SelectItem>
+                <SelectItem value="FIXA">Fixas</SelectItem>
+                <SelectItem value="VARIAVEL">Variáveis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Status Filter */}
         <Select
           value={searchParams.get("status") || "ALL"}
@@ -129,6 +175,59 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
             <SelectItem value={StatusTransacao.CANCELADO}>Cancelados</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Origem Filter */}
+        <Select
+          value={searchParams.get("origem") || "ALL"}
+          onValueChange={(val) => updateUrl("origem", val)}
+        >
+          <SelectTrigger className="w-[140px] bg-black/40 border-border/50 h-10">
+            <SelectValue placeholder="Origem" />
+          </SelectTrigger>
+          <SelectContent className="glass-panel border-border/40">
+            <SelectItem value="ALL">Todas Origens</SelectItem>
+            <SelectItem value="MANUAL">Manual</SelectItem>
+            <SelectItem value="AUTOMATICA">Automática</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Conta Filter */}
+        <div className="flex items-center gap-2">
+          <Building size={16} className="text-muted-foreground hidden lg:block" />
+          <Select
+            value={searchParams.get("contaId") || "ALL"}
+            onValueChange={(val) => updateUrl("contaId", val)}
+          >
+            <SelectTrigger className="w-[160px] bg-black/40 border-border/50 h-10">
+              <SelectValue placeholder="Todas as Contas" />
+            </SelectTrigger>
+            <SelectContent className="glass-panel border-border/40">
+              <SelectItem value="ALL">Todas as Contas</SelectItem>
+              {contas?.map(conta => (
+                <SelectItem key={conta.id} value={String(conta.id)}>{conta.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Categoria Filter */}
+        <div className="flex items-center gap-2">
+          <Tag size={16} className="text-muted-foreground hidden lg:block" />
+          <Select
+            value={searchParams.get("categoriaId") || "ALL"}
+            onValueChange={(val) => updateUrl("categoriaId", val)}
+          >
+            <SelectTrigger className="w-[160px] bg-black/40 border-border/50 h-10">
+              <SelectValue placeholder="Todas Categorias" />
+            </SelectTrigger>
+            <SelectContent className="glass-panel border-border/40">
+              <SelectItem value="ALL">Todas Categorias</SelectItem>
+              {categorias?.map(cat => (
+                <SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

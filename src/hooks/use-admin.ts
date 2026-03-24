@@ -38,13 +38,40 @@ export function useAdminDashboard() {
   });
 }
 
+export interface PlanoResponse {
+  id: number;
+  nome: string;
+  tipo: string;
+  precoMensal: number;
+  maxContas: number;
+  maxCategorias: number;
+  maxCartoes: number;
+  maxTransacoesMes: number;
+  maxMetas: number;
+  maxDividas: number;
+  maxUsuarios: number;
+  relatoriosAvancados: boolean;
+  projecaoSaldo: boolean;
+  ativo: boolean;
+}
+
 export function useAdminTenants() {
   return useQuery({
     queryKey: ["admin", "tenants"],
     queryFn: async () => {
-      // Basic pagination without filters for MVP
+      // ApiResponse.ok(Page) already extracts getContent(), so data.data is the list
       const { data } = await api.get("/admin/tenants?page=0&size=50");
-      return data.data.content as TenantAdminResponse[];
+      return data.data as TenantAdminResponse[];
+    },
+  });
+}
+
+export function usePlanos() {
+  return useQuery({
+    queryKey: ["planos"],
+    queryFn: async () => {
+      const { data } = await api.get("/planos");
+      return data.data as PlanoResponse[];
     },
   });
 }

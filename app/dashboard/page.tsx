@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -12,39 +13,42 @@ import {
   Activity
 } from "lucide-react";
 
-// Mock Data for Dashboard until backend is connected
-const MOCK_SUMMARY = {
-  saldoTotal: 15420.50,
-  receitasMes: 8500.00,
-  despesasMes: -3240.80,
-  faturasAbertas: -1250.00
-};
-
-const MOCK_RECENT_TRANSACTIONS = [
-  { id: 1, descricao: "Salário Mensal", valor: 8500.00, tipo: "RECEITA", data: "2026-03-05", categoria: "Renda Fixa" },
-  { id: 2, descricao: "Mercado Assaí", valor: -450.30, tipo: "DESPESA", data: "2026-03-08", categoria: "Alimentação" },
-  { id: 3, descricao: "Conta de Luz", valor: -180.50, tipo: "DESPESA", data: "2026-03-10", categoria: "Moradia" },
-  { id: 4, descricao: "Uber", valor: -45.00, tipo: "DESPESA", data: "2026-03-11", categoria: "Transporte" },
-];
-
 export default function DashboardPage() {
-  // Real implementation for later:
-  // const { data: summary, isLoading: loadingSummary } = useQuery({
-  //   queryKey: ["dashboard-summary"],
-  //   queryFn: async () => {
-  //     const { data } = await api.get("/relatorios/dashboard");
-  //     return data;
-  //   }
-  // });
+  const { data: dashboardData, isLoading: loadingSummary } = useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: async () => {
+      const { data } = await api.get("/dashboard");
+      return data.data;
+    }
+  });
 
-  const summary = MOCK_SUMMARY;
-  const recentTransactions = MOCK_RECENT_TRANSACTIONS;
+  const { data: transactionsPage, isLoading: loadingTx } = useQuery({
+    queryKey: ["dashboard-recent-tx"],
+    queryFn: async () => {
+      const { data } = await api.get("/transacoes?size=5&sort=data,desc");
+      return data.data; // Page object, typically has .content
+    }
+  });
+
+  const summary = dashboardData || {
+    saldoTotal: 0,
+    mesAtual: { receitas: 0, despesas: 0 },
+    contasAPagar: { total: 0 }
+  };
+
+  const recentTransactions = transactionsPage?.content || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL"
     }).format(value);
+  };
+
+  const formatDate = (dateStr: string) => {
+      if (!dateStr) return "";
+      const date = new Date(dateStr + "T12:00:00Z"); // Fix timezone offsets for strict ISO dates
+      return new Intl.DateTimeFormat("pt-BR").format(date);
   };
 
   return (
@@ -66,7 +70,11 @@ export default function DashboardPage() {
               <Wallet className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white neon-text">{formatCurrency(summary.saldoTotal)}</div>
+              {loadingSummary ? (
+                <Skeleton className="h-8 w-[120px] bg-white/10" />
+              ) : (
+                <div className="text-2xl font-bold text-white neon-text">{formatCurrency(summary.saldoTotal)}</div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">Saldo consolidado</p>
             </CardContent>
           </Card>
@@ -77,8 +85,12 @@ export default function DashboardPage() {
               <ArrowUpRight className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-400">{formatCurrency(summary.receitasMes)}</div>
-              <p className="text-xs text-muted-foreground mt-1">+12% em relação ao mês anterior</p>
+              {loadingSummary ? (
+                <Skeleton className="h-8 w-[120px] bg-white/10" />
+              ) : (
+                <div className="text-2xl font-bold text-green-400">{formatCurrency(summary.mesAtual?.receitas || 0)}</div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Acumulado no mês atual</p>
             </CardContent>
           </Card>
 
@@ -88,8 +100,12 @@ export default function DashboardPage() {
               <ArrowDownRight className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.despesasMes)}</div>
-              <p className="text-xs text-muted-foreground mt-1">-5% em relação ao mês anterior</p>
+              {loadingSummary ? (
+                <Skeleton className="h-8 w-[120px] bg-white/10" />
+              ) : (
+                <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.mesAtual?.despesas || 0)}</div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Acumulado no mês atual</p>
             </CardContent>
           </Card>
 
@@ -99,8 +115,12 @@ export default function DashboardPage() {
               <CreditCard className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-400">{formatCurrency(summary.faturasAbertas)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Vencimento próximo: 15/03</p>
+              {loadingSummary ? (
+                <Skeleton className="h-8 w-[120px] bg-white/10" />
+              ) : (
+                <div className="text-2xl font-bold text-yellow-400">{formatCurrency(summary.contasAPagar?.total || 0)}</div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Total a pagar</p>
             </CardContent>
           </Card>
         </div>
@@ -112,7 +132,7 @@ export default function DashboardPage() {
           <Card className="glass-panel col-span-4 h-[400px]">
             <CardHeader>
               <CardTitle>Fluxo de Caixa</CardTitle>
-              <CardDescription>Receitas vs Despesas (Últimos 6 meses)</CardDescription>
+              <CardDescription>Receitas vs Despesas (Visão Geral)</CardDescription>
             </CardHeader>
             <CardContent className="h-full flex items-center justify-center">
                <div className="text-center text-muted-foreground flex flex-col items-center">
@@ -130,28 +150,46 @@ export default function DashboardPage() {
               <CardDescription>Transações recentes de todas as contas</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto pr-2">
-              <div className="space-y-4">
-                {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 hover:bg-black/40 border border-border/20 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${tx.tipo === 'RECEITA' ? 'bg-green-500/20 text-green-500' : 'bg-destructive/20 text-destructive'}`}>
-                        {tx.tipo === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+              {loadingTx ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-10 rounded-full bg-white/10" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-full bg-white/10" />
+                        <Skeleton className="h-3 w-1/2 bg-white/10" />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{tx.descricao}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{tx.data}</span>
-                          <span>•</span>
-                          <span>{tx.categoria}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : recentTransactions.length > 0 ? (
+                <div className="space-y-4">
+                  {recentTransactions.map((tx: any) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 hover:bg-black/40 border border-border/20 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full shrink-0 ${tx.tipo === 'RECEITA' ? 'bg-green-500/20 text-green-500' : 'bg-destructive/20 text-destructive'}`}>
+                          {tx.tipo === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate max-w-[150px] sm:max-w-[200px]">{tx.descricao}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{formatDate(tx.data)}</span>
+                            <span>•</span>
+                            <span className="truncate">{tx.categoria?.nome || 'Sem Categoria'}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className={`font-bold ml-2 shrink-0 ${tx.tipo === 'RECEITA' ? 'text-green-400' : 'text-white'}`}>
+                        {tx.tipo === 'RECEITA' ? '+' : ''}{formatCurrency(tx.valor)}
+                      </div>
                     </div>
-                    <div className={`font-bold ${tx.tipo === 'RECEITA' ? 'text-green-400' : 'text-white'}`}>
-                      {tx.tipo === 'RECEITA' ? '+' : ''}{formatCurrency(tx.valor)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Nenhuma movimentação recente encontrada.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

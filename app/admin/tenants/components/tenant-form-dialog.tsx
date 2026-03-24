@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useCreateTenant, TenantCreateRequest } from "@/hooks/use-admin";
+import { useCreateTenant, usePlanos, TenantCreateRequest } from "@/hooks/use-admin";
 
 import {
   Dialog,
@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { Building2, Mail, Lock, User, Globe, CreditCard } from "lucide-react";
+import { Building2, Mail, Lock, User, Globe, CreditCard, Loader2 } from "lucide-react";
 
 const tenantSchema = z.object({
   tenantNome: z.string().min(3, "Nome da empresa muito curto"),
@@ -28,11 +29,11 @@ const tenantSchema = z.object({
 
 export function TenantFormDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const createMutation = useCreateTenant();
+  const { data: planos, isLoading: planosLoading } = usePlanos();
 
   const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<TenantCreateRequest>({
     resolver: zodResolver(tenantSchema),
     mode: "onChange",
-    defaultValues: { planoId: 1 } // MVP: Hardcoded plan ID assumption 
   });
 
   const onSubmit = async (data: TenantCreateRequest) => {
@@ -87,12 +88,29 @@ export function TenantFormDialog({ open, onOpenChange }: { open: boolean, onOpen
                  </div>
 
                  <div className="space-y-2 relative">
-                    <Label>ID do Plano Base</Label>
+                    <Label>Plano de Assinatura</Label>
                     <div className="relative">
-                      <CreditCard className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input type="number" placeholder="1" className="pl-10 bg-black/40 border-border/50" {...register("planoId", { valueAsNumber: true })} />
+                      <CreditCard className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground z-10" />
+                      {planosLoading ? (
+                        <div className="flex items-center gap-2 pl-10 py-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Carregando planos...
+                        </div>
+                      ) : (
+                        <select
+                          className="w-full h-10 pl-10 pr-3 rounded-md bg-black/40 border border-border/50 text-sm text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#Eab308]/50 focus:border-[#Eab308]/50 transition-colors"
+                          defaultValue=""
+                          {...register("planoId", { valueAsNumber: true })}
+                        >
+                          <option value="" disabled className="bg-black text-muted-foreground">Selecione um plano...</option>
+                          {planos?.filter(p => p.ativo).map(p => (
+                            <option key={p.id} value={p.id} className="bg-black text-foreground">
+                              {p.nome} — {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.precoMensal)}/mês
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">ID da tabela Planos</p>
+                    {errors.planoId && <p className="text-red-400 text-xs">{errors.planoId.message}</p>}
                  </div>
               </div>
 
@@ -121,8 +139,8 @@ export function TenantFormDialog({ open, onOpenChange }: { open: boolean, onOpen
                  <div className="space-y-2 relative">
                     <Label>Senha Temporária</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input type="password" placeholder="******" className="pl-10 bg-black/40 border-border/50" {...register("adminSenha")} />
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground z-10" />
+                      <PasswordInput placeholder="******" className="pl-10 bg-black/40 border-border/50" {...register("adminSenha")} />
                     </div>
                     {errors.adminSenha && <p className="text-red-400 text-xs">{errors.adminSenha.message}</p>}
                  </div>

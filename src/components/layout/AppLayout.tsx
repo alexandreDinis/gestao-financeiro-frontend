@@ -13,7 +13,9 @@ import {
   LogOut,
   Menu,
   X,
-  Building
+  Building,
+  Target,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -22,8 +24,10 @@ const navigation = [
   { name: "Contas", href: "/contas", icon: Wallet },
   { name: "Categorias", href: "/categorias", icon: Tags },
   { name: "Lançamentos", href: "/lancamentos", icon: ArrowLeftRight },
+  { name: "Recorrências", href: "/recorrencias", icon: Clock },
   { name: "Cartões", href: "/cartoes", icon: CreditCard },
   { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
+  { name: "Orçamentos", href: "/orcamentos", icon: Target },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +65,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="h-full flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center px-6 mb-8">
             <div className="flex items-center justify-between w-full">
-              <span className="text-xl font-bold neon-text tracking-wider">GESTÃO SAAS</span>
+              <span className="text-xl font-bold neon-text tracking-wider">FINANÇAS PESSOAIS</span>
               <button 
                 onClick={() => setSidebarOpen(false)}
                 className="lg:hidden text-muted-foreground hover:text-foreground"
@@ -138,7 +142,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile header (outside the hidden toggle) */}
         <div className="sm:hidden flex items-center justify-between glass-panel border-b border-border/40 px-4 py-3 z-10">
-            <span className="text-lg font-bold neon-text">GESTÃO SAAS</span>
+            <span className="text-lg font-bold neon-text">FINANÇAS PESSOAIS</span>
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 -mr-2 text-muted-foreground hover:text-foreground"

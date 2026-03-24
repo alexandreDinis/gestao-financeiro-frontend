@@ -20,6 +20,8 @@ export interface TransacoesFilters {
   ano?: number;
   tipo?: string;
   status?: string;
+  origem?: string;
+  tipoDespesa?: string;
   contaId?: number;
   categoriaId?: number;
   page?: number;
@@ -65,6 +67,22 @@ export function useCreateTransacao() {
     },
     onError: () => {
       toast.error("Erro", "Não foi possível criar o lançamento.");
+    }
+  });
+}
+
+export function useCreateTransacaoRecorrente() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: (newRecorrencia: any) => api.post("/recorrencias", newRecorrencia),
+    onSuccess: () => {
+      toast.success("Recorrência criada", "Transação recorrente configurada com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+    },
+    onError: () => {
+      toast.error("Erro", "Não foi possível criar a transação recorrente.");
     }
   });
 }
@@ -175,6 +193,22 @@ export function useCancelarTransacao() {
     },
     onSuccess: () => {
       toast.success("Lançamento cancelado");
+    }
+  });
+}
+export function useTornarManualTransacao() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const tenantId = user?.tenantId || "unknown_tenant";
+
+  return useMutation({
+    mutationFn: (id: number) => api.patch(`/transacoes/${id}/tornar-manual`),
+    onSuccess: () => {
+      toast.success("Conversão concluída", "A transação agora é considerada manual.");
+      queryClient.invalidateQueries({ queryKey: ["transacoes", tenantId] });
+    },
+    onError: () => {
+      toast.error("Erro na conversão", "Não foi possível converter esta transação.");
     }
   });
 }

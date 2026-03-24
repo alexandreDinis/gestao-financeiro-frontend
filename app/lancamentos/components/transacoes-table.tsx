@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransacoes, usePagarTransacao, useCancelarTransacao, useDeleteTransacao } from "@/hooks/use-transacoes";
+import { useTransacoes, usePagarTransacao, useCancelarTransacao, useDeleteTransacao, useTornarManualTransacao } from "@/hooks/use-transacoes";
 import { TransacaoResponse, StatusTransacao, TipoTransacao } from "@/types";
 import { statusColors, statusLabels, tipoTransacaoColors, tipoTransacaoLabels } from "@/lib/ui-mappers";
 import { canDelete, canEdit } from "@/lib/rbac";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building } from "lucide-react";
+import { MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building, Hand } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -43,6 +43,7 @@ export function TransacoesTable({ filters }: { filters: any }) {
   const pagarMutation = usePagarTransacao();
   const cancelarMutation = useCancelarTransacao();
   const deleteMutation = useDeleteTransacao();
+  const tornarManualMutation = useTornarManualTransacao();
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -54,6 +55,7 @@ export function TransacoesTable({ filters }: { filters: any }) {
 
   const handlePagar = (id: number) => pagarMutation.mutate(id);
   const handleCancelar = (id: number) => cancelarMutation.mutate(id);
+  const handleTornarManual = (id: number) => tornarManualMutation.mutate(id);
   const handleDelete = () => {
     if (deleteConfirmId) {
       deleteMutation.mutate(deleteConfirmId);
@@ -93,12 +95,17 @@ export function TransacoesTable({ filters }: { filters: any }) {
 
   // Row Renderer for the standard table
   const DesktopRow = ({ t }: { t: TransacaoResponse }) => (
-    <TableRow key={t.id} className="border-border/20 hover:bg-white/5 transition-colors group">
+    <TableRow key={t.id} className={`border-border/20 transition-colors group ${t.geradoAutomaticamente ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-white/5'}`}>
       <TableCell className="text-muted-foreground whitespace-nowrap">
-        {format(new Date(t.data), "dd/MM/yyyy", { locale: ptBR })}
+        {t.data.split('-').reverse().join('/')}
       </TableCell>
       <TableCell className="font-medium text-white max-w-[200px] truncate" title={t.descricao}>
-        {t.descricao}
+        <div className="flex items-center gap-2">
+          <span className="truncate">{t.descricao}</span>
+          {t.geradoAutomaticamente && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center gap-1 shadow-[0_0_8px_rgba(var(--primary),0.2)]">⚙️ Automático</span>}
+          {t.tipoDespesa === 'FIXA' && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Fixa</span>}
+          {t.tipoDespesa === 'VARIAVEL' && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">Variável</span>}
+        </div>
         {t.categoria && (
           <span className="block text-xs font-normal text-muted-foreground mt-0.5 truncate">
             {t.categoria.nome}
@@ -153,6 +160,12 @@ export function TransacoesTable({ filters }: { filters: any }) {
                <DropdownMenuSeparator className="bg-border/40" />
             )}
 
+            {t.geradoAutomaticamente && (
+              <DropdownMenuItem onClick={() => handleTornarManual(t.id)} className="text-primary cursor-pointer focus:bg-primary/10 focus:text-primary">
+                <Hand size={14} className="mr-2" /> Tornar Manual
+              </DropdownMenuItem>
+            )}
+
             {canDelete(user) && (
               <DropdownMenuItem onClick={() => setDeleteConfirmId(t.id)} className="text-destructive cursor-pointer focus:bg-destructive/10 focus:text-destructive">
                 <Trash2 size={14} className="mr-2" /> Excluir
@@ -169,9 +182,14 @@ export function TransacoesTable({ filters }: { filters: any }) {
     <div key={t.id} className="glass-panel border-border/40 p-4 rounded-lg flex flex-col gap-3 relative">
       <div className="flex justify-between items-start">
         <div>
-          <h4 className="font-bold text-white text-base">{t.descricao}</h4>
+          <h4 className="font-bold text-white text-base flex flex-wrap items-center gap-2">
+            <span className="truncate max-w-[150px]">{t.descricao}</span>
+            {t.geradoAutomaticamente && <span className="text-[9px] px-1 py-0 rounded bg-primary/20 text-primary border border-primary/30 whitespace-nowrap">⚙️ Automático</span>}
+            {t.tipoDespesa === 'FIXA' && <span className="text-[9px] px-1 py-0 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap">Fixa</span>}
+            {t.tipoDespesa === 'VARIAVEL' && <span className="text-[9px] px-1 py-0 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 whitespace-nowrap">Variável</span>}
+          </h4>
           <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-             <Clock size={12} /> {format(new Date(t.data), "dd/MM/yyyy", { locale: ptBR })}
+             <Clock size={12} /> {t.data.split('-').reverse().join('/')}
           </span>
         </div>
         <Badge className={`text-[10px] px-1.5 py-0 h-5 ${statusColors[t.status]}`}>
