@@ -106,12 +106,14 @@ export default function TenantsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
-                            <span className="sr-only">Abrir menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
+                              <span className="sr-only">Abrir menu</span>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
                         <DropdownMenuContent align="end" className="glass-panel border-border/40">
                           {t.status === 'ATIVO' ? (
                             <DropdownMenuItem 

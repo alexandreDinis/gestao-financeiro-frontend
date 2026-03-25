@@ -59,6 +59,9 @@ const transacaoSchema = z.object({
   
   // Credit Card fields
   parcelas: z.number().min(1).optional(),
+
+  // Status
+  isPago: z.boolean(),
 }).superRefine((data, ctx) => {
   if (data.tipo === TipoTransacao.TRANSFERENCIA && !data.contaDestinoId) {
     ctx.addIssue({
@@ -85,8 +88,14 @@ const transacaoSchema = z.object({
 
 type TransacaoFormValues = z.infer<typeof transacaoSchema>;
 
-export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
+export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => void, initialData?: any }) {
   const createMutation = useCreateTransacao();
+  const updateRecorrenteMutation = { 
+    mutateAsync: async (data: any) => { 
+      return api.put(`/recorrencias/${initialData.id}`, data);
+    },
+    isPending: false // Simplificado para este exemplo
+  };
   const createRecorrenteMutation = useCreateTransacaoRecorrente();
   const compraCartaoMutation = useCompraCartaoMutation();
 
@@ -123,12 +132,24 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
     formState: { errors, isSubmitting },
   } = useForm<TransacaoFormValues>({
     resolver: zodResolver(transacaoSchema),
-    defaultValues: {
+    defaultValues: initialData ? {
+      descricao: initialData.descricao,
+      valor: initialData.valor,
+      tipo: initialData.tipo as TipoTransacao,
+      data: initialData.dataInicio || new Date().toISOString().split("T")[0],
+      isRecorrente: true,
+      periodicidade: initialData.periodicidade,
+      categoriaId: initialData.categoria?.id,
+      contaOrigemId: initialData.conta?.id,
+      dataFim: initialData.dataFim,
+      isPago: initialData.status === "PAGO",
+    } : {
       tipo: TipoTransacao.DESPESA,
       data: new Date().toISOString().split("T")[0],
       descricao: "",
       valor: 0,
       isRecorrente: false,
+      isPago: true,
     },
   });
 
@@ -168,7 +189,12 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
           categoriaId: isTransferencia ? null : data.categoriaId,
           contaId: data.contaOrigemId,
         };
-        await createRecorrenteMutation.mutateAsync(payload);
+
+        if (initialData?.id) {
+          await updateRecorrenteMutation.mutateAsync(payload);
+        } else {
+          await createRecorrenteMutation.mutateAsync(payload);
+        }
       } else if (cartaoCorrespondente && isDespesa) {
         // Enviar para API de Cartões (Faturas) - Apenas se NÃO for recorrente (Compras normais/parceladas)
         await compraCartaoMutation.mutateAsync({
@@ -186,6 +212,7 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
           tipoDespesa: isDespesa ? data.tipoDespesa : null,
           categoriaId: isTransferencia ? null : data.categoriaId,
           contaDestinoId: isTransferencia ? data.contaDestinoId : null,
+          status: data.isPago ? "PAGO" : "PENDENTE",
         };
         await createMutation.mutateAsync(payload);
       }
@@ -629,6 +656,28 @@ export function TransacaoForm({ onSuccess }: { onSuccess: () => void }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Status Checkbox (Only for non-recurrent and non-credit card) */}
+      {!isRecorrente && !isCartao && !isTransferencia && (
+        <div className="flex items-center space-x-2 py-2 px-4 rounded-lg bg-green-500/5 border border-green-500/20">
+          <Controller
+            name="isPago"
+            control={control}
+            render={({ field }) => (
+              <Checkbox 
+                id="isPago" 
+                checked={field.value} 
+                onCheckedChange={field.onChange} 
+                className="border-green-500/50 text-green-500"
+              />
+            )}
+          />
+          <Label htmlFor="isPago" className="cursor-pointer text-sm font-medium flex items-center gap-2 text-green-400">
+            <Check size={16} />
+            {tipoSelecionado === TipoTransacao.RECEITA ? "Recebido" : "Pago"}
+          </Label>
         </div>
       )}
 

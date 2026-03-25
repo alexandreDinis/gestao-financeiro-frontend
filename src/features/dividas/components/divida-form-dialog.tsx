@@ -34,17 +34,25 @@ import { useCriarDividaMutation } from "../hooks/use-dividas-mutation";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
 
+interface FormValues {
+  pessoaId: number;
+  descricao: string;
+  tipo: "A_RECEBER" | "A_PAGAR";
+  valorTotal: number;
+  dataInicio: string;
+  parcelasCount: number;
+  observacao?: string;
+}
+
 const formSchema = z.object({
-  pessoaId: z.coerce.number().min(1, "Selecione uma pessoa"),
+  pessoaId: z.number().min(1, "Selecione uma pessoa"),
   descricao: z.string().min(3, "Descrição muito curta"),
   tipo: z.enum(["A_RECEBER", "A_PAGAR"]),
-  valorTotal: z.coerce.number().positive("Valor deve ser maior que zero"),
+  valorTotal: z.number().positive("Valor deve ser maior que zero"),
   dataInicio: z.string().min(1, "Data de Início é obrigatória"),
-  parcelasCount: z.coerce.number().min(1, "No mínimo 1 parcela"),
+  parcelasCount: z.number().min(1, "No mínimo 1 parcela"),
   observacao: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+}) satisfies z.ZodType<FormValues>;
 
 interface DividaFormDialogProps {
   open: boolean;
@@ -209,7 +217,8 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                     <FormItem>
                       <FormLabel>Pessoa Relacionada</FormLabel>
                       <Select 
-                        value={field.value ? field.value.toString() : ""} 
+                        key={`select-pessoa-${pessoas?.length || 0}-${field.value}`}
+                        value={field.value && field.value !== 0 ? field.value.toString() : ""} 
                         onValueChange={(val) => {
                           if (val === "new") {
                             setInlinePessoaOpen(true);
@@ -220,7 +229,11 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-10 px-3 py-2 bg-black/40 border-border/50 text-white focus:ring-1 focus:ring-primary">
-                            <SelectValue placeholder="Selecione um contato" />
+                            <SelectValue placeholder="Selecione um contato">
+                              {field.value && field.value !== 0 
+                                ? pessoas?.find(p => p.id === field.value)?.nome 
+                                : undefined}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-zinc-950 border border-border/40 text-white max-h-[250px]">
@@ -228,7 +241,11 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                             + Cadastrar Nova Pessoa
                           </SelectItem>
                           {pessoas?.map(p => (
-                            <SelectItem key={p.id} value={p.id.toString()} className="focus:bg-primary/20 focus:text-white cursor-pointer hover:text-white">
+                            <SelectItem 
+                              key={p.id} 
+                              value={p.id.toString()}
+                              className="focus:bg-primary/20 focus:text-white cursor-pointer hover:text-white"
+                            >
                               {p.nome}
                             </SelectItem>
                           ))}
@@ -262,7 +279,13 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                     <FormItem>
                       <FormLabel>Valor Total (R$)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" className="bg-black/40 border-border/50 text-white font-bold" {...field} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          className="bg-black/40 border-border/50 text-white font-bold" 
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -276,7 +299,13 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                     <FormItem>
                       <FormLabel>Nº Parcelas</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" className="bg-black/40 border-border/50" {...field} />
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          className="bg-black/40 border-border/50" 
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

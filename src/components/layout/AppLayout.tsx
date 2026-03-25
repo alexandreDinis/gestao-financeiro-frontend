@@ -15,9 +15,12 @@ import {
   X,
   Building,
   Target,
-  Clock
+  Clock,
+  Settings,
+  RefreshCcw
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -28,6 +31,7 @@ const navigation = [
   { name: "Cartões", href: "/cartoes", icon: CreditCard },
   { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
   { name: "Orçamentos", href: "/orcamentos", icon: Target },
+  { name: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -107,13 +111,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-sm font-medium text-foreground truncate">{user?.nome || "Usuário"}</p>
                   <p className="text-xs font-medium text-muted-foreground truncate">{user?.email || "usuario@tenant.com"}</p>
                 </div>
-                <button 
-                  onClick={logout}
-                  className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10"
-                  title="Sair"
-                >
-                  <LogOut size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+
+                  <button 
+                    onClick={logout}
+                    className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10"
+                    title="Sair"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

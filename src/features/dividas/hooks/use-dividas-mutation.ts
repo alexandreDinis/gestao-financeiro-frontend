@@ -16,6 +16,7 @@ export function useCriarDividaMutation() {
       toast.success("Empréstimo Registrado", "A dívida foi criada e as parcelas geradas.");
       queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] }); // Updates score
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível registrar a dívida.");
@@ -78,7 +79,8 @@ export function usePagarParcelaMutation() {
       queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] }); 
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }); // Optional: Multi-invalidation 
-    }
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
   });
 }
 
@@ -92,6 +94,7 @@ export function useDeletarDividaMutation() {
       toast.success("Dívida Excluída", "O registro foi deletado permanentemente.");
       queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível excluir a dívida.");

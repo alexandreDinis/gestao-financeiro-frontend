@@ -97,6 +97,7 @@ export default function ContasPage() {
     mutationFn: (req: ContaRequest) => api.post("/contas", req),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contas"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Conta criada com sucesso!");
       closeDialog();
     },
@@ -108,6 +109,7 @@ export default function ContasPage() {
       api.put(`/contas/${id}`, req),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contas"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Conta atualizada com sucesso!");
       closeDialog();
     },
@@ -118,6 +120,7 @@ export default function ContasPage() {
     mutationFn: (id: number) => api.delete(`/contas/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contas"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Conta excluída com sucesso!");
       setDeleteConfirmId(null);
     },

@@ -14,6 +14,7 @@ export function useCriarOrcamentoMutation() {
       // Invalidate both lists
       queryClient.invalidateQueries({ queryKey: ["orcamentos-resumo", user?.id, request.mes, request.ano] });
       queryClient.invalidateQueries({ queryKey: ["orcamentos", user?.id, request.mes, request.ano] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Orçamento estipulado com sucesso!");
     },
     onError: (error: any) => {
@@ -33,6 +34,7 @@ export function useAtualizarOrcamentoMutation(mes: number, ano: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orcamentos-resumo", user?.id, mes, ano] });
       queryClient.invalidateQueries({ queryKey: ["orcamentos", user?.id, mes, ano] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Limite de gasto atualizado!");
     },
     onError: () => toast.error("Erro ao atualizar o orçamento")
@@ -48,6 +50,7 @@ export function useDeletarOrcamentoMutation(mes: number, ano: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orcamentos-resumo", user?.id, mes, ano] });
       queryClient.invalidateQueries({ queryKey: ["orcamentos", user?.id, mes, ano] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       toast.success("Orçamento removido com sucesso!");
     },
     onError: () => toast.error("Erro ao remover orçamento")

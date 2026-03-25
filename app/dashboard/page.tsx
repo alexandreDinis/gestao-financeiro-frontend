@@ -16,6 +16,7 @@ import { DashboardBudgets } from "@/features/dashboard/components/DashboardBudge
 import { DashboardCreditCards } from "@/features/dashboard/components/DashboardCreditCards";
 import { DashboardProjection } from "@/features/dashboard/components/DashboardProjection";
 
+
 export default function DashboardPage() {
   const { data: dashboard, isLoading } = useQuery<DashboardResponse>({
     queryKey: ["dashboard-v2"],
@@ -37,9 +38,12 @@ export default function DashboardPage() {
               Visão geral de alta performance • V2
             </p>
           </div>
-          <div className="text-right hidden md:block">
-             <p className="text-xs text-muted-foreground uppercase tracking-widest">Data de Referência</p>
-             <p className="text-sm font-bold text-white">{new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</p>
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden md:block">
+               <p className="text-xs text-muted-foreground uppercase tracking-widest">Data de Referência</p>
+               <p className="text-sm font-bold text-white">{new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</p>
+            </div>
+
           </div>
         </div>
 

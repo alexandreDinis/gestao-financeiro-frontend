@@ -14,6 +14,7 @@ export function useCriarCartaoMutation() {
       toast.success("Cartão Cadastrado", "O cartão de crédito foi registrado com sucesso.");
       queryClient.invalidateQueries({ queryKey: [CARTOES_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: ["contas", user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível cadastrar o cartão.");
@@ -37,6 +38,7 @@ export function useEditarCartaoMutation() {
         queryKey: [CARTOES_QUERY_KEY, user?.tenantId],
       });
       queryClient.invalidateQueries({ queryKey: ["contas", user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error(
@@ -57,6 +59,7 @@ export function useDeletarCartaoMutation() {
       toast.success("Cartão Excluído", "O cartão foi removido.");
       queryClient.invalidateQueries({ queryKey: [CARTOES_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: ["contas", user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível excluir o cartão.");
@@ -74,6 +77,7 @@ export function useCompraCartaoMutation() {
       toast.success("Compra Lançada", "A despesa foi lançada na fatura do cartão.");
       queryClient.invalidateQueries({ queryKey: [FATURAS_QUERY_KEY, user?.tenantId, variables.cartaoId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível registrar a compra no cartão.");
@@ -91,6 +95,7 @@ export function usePagarFaturaMutation() {
       toast.success("Fatura Paga", "O pagamento da fatura consolidada foi registrado com sucesso.");
       queryClient.invalidateQueries({ queryKey: [FATURAS_QUERY_KEY, user?.tenantId, variables.cartaoId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       queryClient.invalidateQueries({ queryKey: ["contas"] }); // Abate o saldo da conta destino do pagamento
     },
     onError: (error: any) => {

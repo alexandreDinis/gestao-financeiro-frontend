@@ -64,6 +64,7 @@ export function useCreateTransacao() {
       toast.success("Transação criada", "Lançamento adicionado com sucesso.");
       // Invalidate the entire transacoes scope for this tenant to force refetch
       queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro", "Não foi possível criar o lançamento.");
@@ -80,6 +81,7 @@ export function useCreateTransacaoRecorrente() {
     onSuccess: () => {
       toast.success("Recorrência criada", "Transação recorrente configurada com sucesso.");
       queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro", "Não foi possível criar a transação recorrente.");
@@ -96,6 +98,7 @@ export function useDeleteTransacao() {
     onSuccess: () => {
       toast.success("Transação excluída", "O lançamento foi apagado permanentemente.");
       queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro na exclusão", "Ocorreu um erro ao tentar apagar esta transação.");
@@ -147,6 +150,7 @@ export function usePagarTransacao() {
     onSettled: () => {
       // Always refetch in the background to ensure absolute sync
       queryClient.invalidateQueries({ queryKey: ["transacoes", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onSuccess: () => {
       toast.success("Status atualizado", "Lançamento marcado como Pago.");
@@ -190,6 +194,7 @@ export function useCancelarTransacao() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["transacoes", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onSuccess: () => {
       toast.success("Lançamento cancelado");
@@ -206,6 +211,7 @@ export function useTornarManualTransacao() {
     onSuccess: () => {
       toast.success("Conversão concluída", "A transação agora é considerada manual.");
       queryClient.invalidateQueries({ queryKey: ["transacoes", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro na conversão", "Não foi possível converter esta transação.");

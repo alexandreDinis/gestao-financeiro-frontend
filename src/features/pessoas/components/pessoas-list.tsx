@@ -6,6 +6,7 @@ import { useDeletarPessoaMutation } from "../hooks/use-pessoas-mutation";
 import { Pessoa } from "../types";
 import { ScoreBadge } from "./score-badge";
 import { PessoaFormDialog } from "./pessoa-form-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { 
   Plus, 
   MoreVertical, 
@@ -31,6 +32,9 @@ export function PessoasList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [pessoaParaEditar, setPessoaParaEditar] = useState<Pessoa | undefined>(undefined);
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pessoaToDelete, setPessoaToDelete] = useState<number | null>(null);
 
   // Sorting: Highest score / most reliable first
   const orderMap = {
@@ -72,8 +76,14 @@ export function PessoasList() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Tem certeza que deseja excluir esta pessoa? Não é possível excluir se houver dívidas atreladas.")) {
-      deletarMutation.mutate(id);
+    setPessoaToDelete(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const onConfirmDelete = () => {
+    if (pessoaToDelete) {
+      deletarMutation.mutate(pessoaToDelete);
+      setConfirmDeleteOpen(false);
     }
   };
 
@@ -150,11 +160,13 @@ export function PessoasList() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
                         <DropdownMenuContent align="end" className="glass-panel border-border/40">
                           <DropdownMenuItem onClick={() => handleEdit(pessoa)} className="cursor-pointer">
                             <Pencil className="mr-2 h-4 w-4" />
@@ -180,6 +192,17 @@ export function PessoasList() {
         open={formOpen} 
         onOpenChange={setFormOpen} 
         pessoaParams={pessoaParaEditar} 
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Excluir Contato?"
+        description="Tem certeza que deseja excluir esta pessoa? Não é possível excluir se houver dívidas ou empréstimos ativos vinculados."
+        onConfirm={onConfirmDelete}
+        confirmText="Excluir Contato"
+        variant="danger"
+        isLoading={deletarMutation.isPending}
       />
     </div>
   );

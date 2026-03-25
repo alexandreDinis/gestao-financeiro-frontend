@@ -138,12 +138,14 @@ export function TransacoesTable({ filters }: { filters: any }) {
       <TableCell className="text-right">
         {/* Kebab Menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-              <MoreVertical size={16} />
-              <span className="sr-only">Abrir menu</span>
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <MoreVertical size={16} />
+                <span className="sr-only">Abrir menu</span>
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end" className="glass-panel border-border/40 w-[160px]">
             {canEdit(user) && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
               <DropdownMenuItem onClick={() => handlePagar(t.id)} className="text-green-400 cursor-pointer focus:bg-green-500/10 focus:text-green-400">
@@ -214,11 +216,13 @@ export function TransacoesTable({ filters }: { filters: any }) {
            
            {/* Mobile Actions directly exposed or in Kebab */}
            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
-                Opções <MoreVertical size={12} className="ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
+                  Opções <MoreVertical size={12} className="ml-1" />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end" className="glass-panel border-border/40">
               {canEdit(user) && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
                 <DropdownMenuItem onClick={() => handlePagar(t.id)} className="text-green-400 cursor-pointer">

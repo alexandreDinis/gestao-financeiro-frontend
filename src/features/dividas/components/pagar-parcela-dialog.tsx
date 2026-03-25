@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,11 +69,19 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
   const valorPagoWatch = watch("valorPago");
 
   // Ao abrir o modal e ter a parcela, seta o valor real
-  useState(() => {
+  useEffect(() => {
     if (parcela) {
       setValue("valorPago", parcela.valor);
     }
-  });
+  }, [parcela, setValue]);
+
+  // Auto-selecionar primeira conta se houver
+  useEffect(() => {
+    const currentContaId = watch("contaId");
+    if (contas && contas.length > 0 && !currentContaId) {
+      setValue("contaId", contas[0].id);
+    }
+  }, [contas, setValue, watch]);
 
   const onSubmit = async (data: PagarFormValues) => {
     if (!parcela) return;
@@ -153,9 +161,17 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
               name="contaId"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString() || ""}>
+                <Select 
+                  key={`select-conta-${contas?.length || 0}-${field.value}`}
+                  onValueChange={(val) => field.onChange(Number(val))} 
+                  value={field.value?.toString() || ""}
+                >
                   <SelectTrigger className={`bg-black/40 border-border/50 ${errors.contaId ? 'border-red-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione a conta" />
+                    <SelectValue placeholder="Selecione a conta">
+                      {field.value 
+                        ? contas?.find(c => c.id === field.value)?.nome 
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="glass-panel border-border/40">
                     {contas?.map((c) => (

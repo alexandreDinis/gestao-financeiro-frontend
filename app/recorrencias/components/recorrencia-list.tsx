@@ -17,8 +17,10 @@ import { Button } from "@/components/ui/button";
 import { 
   MoreVertical, 
   Trash2, 
-  Calendar, 
-  Settings, 
+  Calendar,
+  Edit2,
+  AlertCircle,
+ 
   Tag, 
   Building
 } from "lucide-react";
@@ -37,8 +39,12 @@ const statusColors: any = {
   ENCERRADA: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-export function RecorrenciaList() {
-  const { data: recorrencias, isLoading, isError } = useRecorrencias();
+interface RecorrenciaListProps {
+  onEdit?: (recorrencia: any) => void;
+}
+
+export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
+  const { data: recorrencias, isLoading, refetch, isError } = useRecorrencias();
   const deleteMutation = useDeleteRecorrencia();
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -101,6 +107,12 @@ export function RecorrenciaList() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="glass-panel border-border/40">
+                    <DropdownMenuItem 
+                      onClick={() => onEdit?.(rec)}
+                      className="cursor-pointer"
+                    >
+                      <Edit2 size={14} className="mr-2" /> Editar
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => deleteMutation.mutate(rec.id)}
                       className="text-destructive cursor-pointer focus:bg-destructive/10 focus:text-destructive"

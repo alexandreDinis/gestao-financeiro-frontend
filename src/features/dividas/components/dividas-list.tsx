@@ -9,6 +9,7 @@ import { DividaTimeline } from "./divida-timeline";
 import { DividaFormDialog } from "./divida-form-dialog";
 import { PagarParcelaDialog } from "./pagar-parcela-dialog";
 import { DividaDetalhesDialog } from "./divida-detalhes-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Divida, ParcelaDivida } from "../types";
 import { formatCurrency } from "@/lib/utils";
 import { 
@@ -44,9 +45,18 @@ export function DividasList({ tipo }: DividasListProps) {
   const [detalhesOpen, setDetalhesOpen] = useState(false);
   const [selectedDivida, setSelectedDivida] = useState<Divida | null>(null);
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [dividaToDelete, setDividaToDelete] = useState<number | null>(null);
+
   const handleDelete = (id: number) => {
-    if (confirm("CUIDADO: Excluir esta dívida removerá todas as parcelas permanentemente. Continuar?")) {
-      deletarMutation.mutate(id);
+    setDividaToDelete(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const onConfirmDelete = () => {
+    if (dividaToDelete) {
+      deletarMutation.mutate(dividaToDelete);
+      setConfirmDeleteOpen(false);
     }
   };
 
@@ -116,7 +126,14 @@ export function DividasList({ tipo }: DividasListProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 min-w-[200px]">
-                        <DividaTimeline parcelas={divida.parcelas} dividaId={divida.id} />
+                        <DividaTimeline 
+                          parcelas={divida.parcelas} 
+                          dividaId={divida.id} 
+                          onPagar={(p) => {
+                            setSelectedParcela(p);
+                            setPagarOpen(true);
+                          }}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                          <span className={isReceber ? "text-green-500" : "text-white"}>
@@ -131,11 +148,13 @@ export function DividasList({ tipo }: DividasListProps) {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
                           <DropdownMenuContent align="end" className="glass-panel border-border/40">
                             {(() => {
                                const pendentes = divida.parcelas.filter(p => p.status === 'PENDENTE' || p.status === 'ATRASADO');
@@ -192,6 +211,17 @@ export function DividasList({ tipo }: DividasListProps) {
         open={detalhesOpen}
         onOpenChange={setDetalhesOpen}
         divida={selectedDivida}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Excluir Dívida Permanentemente?"
+        description="Esta ação não pode ser desfeita. Todas as parcelas e o histórico vinculado serão removidos."
+        onConfirm={onConfirmDelete}
+        confirmText="Excluir Agora"
+        variant="danger"
+        isLoading={deletarMutation.isPending}
       />
     </div>
   );

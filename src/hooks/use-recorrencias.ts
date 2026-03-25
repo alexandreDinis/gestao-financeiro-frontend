@@ -27,6 +27,7 @@ export function useCreateRecorrencia() {
     onSuccess: () => {
       toast.success("Recorrência criada", "A automação foi configurada com sucesso.");
       queryClient.invalidateQueries({ queryKey: ["recorrencias", user?.tenantId || "unknown"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro", "Não foi possível criar a recorrência.");
@@ -43,6 +44,7 @@ export function useDeleteRecorrencia() {
     onSuccess: () => {
       toast.success("Excluída", "Recorrência removida.");
       queryClient.invalidateQueries({ queryKey: ["recorrencias", user?.tenantId || "unknown"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {
       toast.error("Erro", "Falha ao excluir recorrência.");
@@ -51,10 +53,13 @@ export function useDeleteRecorrencia() {
 }
 
 export function useGerarManualRecorrencias() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => api.post("/recorrencias/gerar-manual"),
     onSuccess: () => {
       toast.success("Processamento iniciado", "As transações pendentes estão sendo geradas.");
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["transacoes"] });
     },
     onError: () => {
       toast.error("Erro", "Falha ao disparar processamento manual.");

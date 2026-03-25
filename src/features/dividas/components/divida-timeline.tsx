@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 interface DividaTimelineProps {
   parcelas: ParcelaDivida[];
   dividaId: number;
+  onPagar?: (parcela: ParcelaDivida) => void;
 }
 
-export function DividaTimeline({ parcelas, dividaId }: DividaTimelineProps) {
+export function DividaTimeline({ parcelas, dividaId, onPagar }: DividaTimelineProps) {
   const [expanded, setExpanded] = useState(false);
-  const pagarMutation = usePagarParcelaMutation();
 
   // Ordena parcelas por vencimento
   const sortedParcelas = [...parcelas].sort((a, b) => 
@@ -32,13 +32,10 @@ export function DividaTimeline({ parcelas, dividaId }: DividaTimelineProps) {
     return "bg-black/40 text-muted-foreground border-border/50"; // Pendente normal
   };
 
-  const handlePagar = (parcelaId: number, e: React.MouseEvent) => {
+  const handlePagar = (parcela: ParcelaDivida, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Confirmar pagamento manual desta parcela?")) {
-      pagarMutation.mutate({
-        parcelaId,
-        request: { contaId: 1, observacao: "Pagamento manual via Timeline" } // Hardcoded contaId for MVP as backend requires it
-      });
+    if (onPagar) {
+      onPagar(parcela);
     }
   };
 
@@ -83,7 +80,7 @@ export function DividaTimeline({ parcelas, dividaId }: DividaTimelineProps) {
               statusText = `Vence em ${daysDiff} dias`;
             }
 
-            const isPending = pagarMutation.isPending && pagarMutation.variables?.parcelaId === p.id;
+            const isPending = false; // Progress handled by parent or mutation state if needed
 
             return (
               <div key={p.id} className="flex items-center justify-between text-sm group">
@@ -97,17 +94,14 @@ export function DividaTimeline({ parcelas, dividaId }: DividaTimelineProps) {
                   </div>
                 </div>
                 
-                {p.status !== 'PAGO' && p.status !== 'CANCELADO' && (
                   <Button 
                     size="sm" 
                     variant="outline" 
                     className="h-7 text-xs border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handlePagar(p.id, e)}
-                    disabled={isPending}
+                    onClick={(e) => handlePagar(p, e)}
                   >
-                    {isPending ? "Processando..." : "Dar Baixa"}
+                    Dar Baixa
                   </Button>
-                )}
               </div>
             );
           })}
