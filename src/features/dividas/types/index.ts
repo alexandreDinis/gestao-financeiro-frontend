@@ -1,6 +1,7 @@
 export type TipoDivida = 'A_RECEBER' | 'A_PAGAR';
 export type StatusDivida = 'PENDENTE' | 'PAGA' | 'ATRASADA';
 export type StatusTransacao = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
+export type Periodicidade = 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'ANUAL';
 
 export interface ParcelaDivida {
   id: number;
@@ -25,7 +26,12 @@ export interface Divida {
   status: StatusDivida;
   observacao?: string;
   parcelas: ParcelaDivida[];
+  totalParcelas: number;
   createdAt: string;
+  recorrente?: boolean;
+  periodicidade?: Periodicidade;
+  diaVencimento?: number;
+  valorParcelaRecorrente?: number;
 }
 
 export interface DividaRequest {
@@ -36,12 +42,23 @@ export interface DividaRequest {
   dataInicio: string;
   dataFim?: string;
   observacao?: string;
-  parcelas: number;
+  parcelas?: number;
+  recorrente?: boolean;
+  periodicidade?: Periodicidade;
+  diaVencimento?: number;
+  valorParcelaRecorrente?: number;
 }
 
 export interface PagarParcelaRequest {
   contaId: number;
-  categoriaId?: number; // Optional on backend
+  categoriaId?: number; 
   dataPagamento?: string; 
-  valorPago?: number; // Support for partial payments
+  valorPago?: number; 
 }
+
+export interface DividasResumo {
+  items: Divida[];
+  totalGeral: number;
+  totalItems: number;
+}
+

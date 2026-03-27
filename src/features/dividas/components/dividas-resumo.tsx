@@ -7,18 +7,19 @@ import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 
 export function DividasResumo() {
   // Passamos undefined para buscar todas as dívidas e sumarizar
-  const { data: dividas, isLoading: loadingDividas } = useDividasQuery();
+  const { data: resumo, isLoading: loadingDividas } = useDividasQuery();
   const { data: pessoas, isLoading: loadingPessoas } = usePessoasQuery();
 
   if (loadingDividas || loadingPessoas) {
     return <div className="h-32 glass-panel border-border/40 rounded-xl animate-pulse" />;
   }
 
+  const dividas = resumo?.items || [];
   let totalReceber = 0;
   let totalPagar = 0;
   let atrasadosScore = 0; // Quantidade de contas atrasadas
 
-  dividas?.forEach(d => {
+  dividas.forEach(d => {
     if (d.tipo === 'A_RECEBER') {
       totalReceber += d.valorRestante;
     } else {

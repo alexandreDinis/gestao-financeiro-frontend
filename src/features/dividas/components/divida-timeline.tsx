@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 
 interface DividaTimelineProps {
   parcelas: ParcelaDivida[];
+  totalParcelas: number;
   dividaId: number;
   onPagar?: (parcela: ParcelaDivida) => void;
 }
 
-export function DividaTimeline({ parcelas, dividaId, onPagar }: DividaTimelineProps) {
+export function DividaTimeline({ parcelas, totalParcelas, dividaId, onPagar }: DividaTimelineProps) {
   const [expanded, setExpanded] = useState(false);
 
   // Ordena parcelas por vencimento
@@ -50,11 +51,11 @@ export function DividaTimeline({ parcelas, dividaId, onPagar }: DividaTimelinePr
           <div 
             key={p.id}
             className={cn(
-              "w-4 h-4 rounded border flex items-center justify-center text-[10px]",
+              "h-4 px-1 rounded border flex items-center justify-center text-[10px] min-w-[1rem]",
               getStatusColor(p)
             )}
           >
-            {p.status === 'PAGO' ? <Check size={10} /> : p.numeroParcela}
+            {p.status === 'PAGO' ? <Check size={10} /> : `${p.numeroParcela}/${totalParcelas}`}
           </div>
         ))}
         {expanded ? <ChevronUp size={14} className="text-muted-foreground ml-1" /> : <ChevronDown size={14} className="text-muted-foreground ml-1" />}
@@ -89,7 +90,7 @@ export function DividaTimeline({ parcelas, dividaId, onPagar }: DividaTimelinePr
                      {p.status === 'PAGO' ? <Check size={12} /> : <Clock size={12} />}
                   </div>
                   <div>
-                    <div className="text-white font-medium">Parcela {p.numeroParcela} - R$ {p.valor.toFixed(2)}</div>
+                    <div className="text-white font-medium">Parcela {p.numeroParcela}/{totalParcelas} - R$ {p.valor.toFixed(2)}</div>
                     <div className={cn("text-xs", statusColor)}>{statusText}</div>
                   </div>
                 </div>

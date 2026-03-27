@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { Divida, StatusTransacao } from "../types";
+import { useDividaQuery } from "../hooks/use-dividas-query";
 import { formatCurrency } from "@/lib/utils";
 
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 
 interface DividaDetalhesDialogProps {
   open: boolean;
@@ -28,13 +29,17 @@ const statusColors: Record<StatusTransacao, { border: string, text: string, bg: 
   CANCELADO: { bg: "bg-muted", border: "border-muted-foreground/30", text: "text-muted-foreground", icon: <XCircle size={12} className="mr-1" /> }
 };
 
-export function DividaDetalhesDialog({ open, onOpenChange, divida }: DividaDetalhesDialogProps) {
+export function DividaDetalhesDialog({ open, onOpenChange, divida: initialDivida }: DividaDetalhesDialogProps) {
+  const { data: fullDivida, isLoading } = useDividaQuery(initialDivida?.id || 0);
+  
+  const divida = fullDivida || initialDivida;
+
   if (!divida) return null;
 
   const isReceber = divida.tipo === "A_RECEBER";
   
-  // Sort parcelas by ID to keep the chronological / split order
-  const parcelasOrdenadas = [...divida.parcelas].sort((a, b) => a.id - b.id);
+  // Sort parcelas by NumeroParcela
+  const parcelasOrdenadas = [...divida.parcelas].sort((a, b) => a.numeroParcela - b.numeroParcela);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

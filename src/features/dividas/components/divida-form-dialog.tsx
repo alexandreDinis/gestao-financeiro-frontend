@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format, addMonths } from "date-fns";
@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -33,6 +32,7 @@ import {
 import { useCriarDividaMutation } from "../hooks/use-dividas-mutation";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
+import { RefreshCw } from "lucide-react";
 
 interface FormValues {
   pessoaId: number;
@@ -42,6 +42,9 @@ interface FormValues {
   dataInicio: string;
   parcelasCount: number;
   observacao?: string;
+  recorrente: boolean;
+  diaVencimento?: number;
+  dataFim?: string;
 }
 
 const formSchema = z.object({
@@ -52,6 +55,9 @@ const formSchema = z.object({
   dataInicio: z.string().min(1, "Data de Início é obrigatória"),
   parcelasCount: z.number().min(1, "No mínimo 1 parcela"),
   observacao: z.string().optional(),
+  recorrente: z.boolean(),
+  diaVencimento: z.number().min(1).max(31).optional(),
+  dataFim: z.string().optional(),
 }) satisfies z.ZodType<FormValues>;
 
 interface DividaFormDialogProps {
@@ -62,11 +68,10 @@ interface DividaFormDialogProps {
 
 export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER" }: DividaFormDialogProps) {
   const criarMutation = useCriarDividaMutation();
-  const { data: pessoas, isLoading: pessoasLoading } = usePessoasQuery();
+  const { data: pessoas } = usePessoasQuery();
   
   const [inlinePessoaOpen, setInlinePessoaOpen] = useState(false);
   
-  // Custom states for manual installment preview
   const [showPreview, setShowPreview] = useState(false);
   const [manualParcelas, setManualParcelas] = useState<{ id: number, valor: number, vencimento: string }[]>([]);
   const [somaParcelas, setSomaParcelas] = useState(0);
@@ -81,37 +86,36 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
       dataInicio: format(new Date(), "yyyy-MM-dd"),
       parcelasCount: 1,
       observacao: "",
+      recorrente: false,
+      diaVencimento: undefined,
+      dataFim: undefined,
     },
   });
 
   const watchValorTotal = form.watch("valorTotal");
   const watchParcelasCount = form.watch("parcelasCount");
   const watchDataInicio = form.watch("dataInicio");
+  const watchRecorrente = form.watch("recorrente");
   const isPending = criarMutation.isPending;
 
-  // Auto-generate preview when total, count or start date changes
   useEffect(() => {
+    if (watchRecorrente) {
+      setShowPreview(false);
+      return;
+    }
     if (watchValorTotal > 0 && watchParcelasCount > 0 && watchDataInicio) {
       const baseValue = parseFloat((watchValorTotal / watchParcelasCount).toFixed(2));
       const newParcelas = [];
       let currentSum = 0;
-      const startDate = new Date(watchDataInicio + "T12:00:00"); // Avoid timezone shift
+      const startDate = new Date(watchDataInicio + "T12:00:00");
 
       for (let i = 0; i < watchParcelasCount; i++) {
-        // Handle rounding difference on the last installment
         const val = i === watchParcelasCount - 1 
           ? parseFloat((watchValorTotal - currentSum).toFixed(2))
           : baseValue;
-        
         currentSum += val;
-        
         const nextDate = addMonths(startDate, i);
-        
-        newParcelas.push({
-          id: i + 1,
-          valor: val,
-          vencimento: format(nextDate, "yyyy-MM-dd")
-        });
+        newParcelas.push({ id: i + 1, valor: val, vencimento: format(nextDate, "yyyy-MM-dd") });
       }
       
       setManualParcelas(newParcelas);
@@ -120,9 +124,8 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
     } else {
       setShowPreview(false);
     }
-  }, [watchValorTotal, watchParcelasCount, watchDataInicio]);
+  }, [watchValorTotal, watchParcelasCount, watchDataInicio, watchRecorrente]);
 
-  // Recalculate sum when manual edits happen
   useEffect(() => {
     const sum = manualParcelas.reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
     setSomaParcelas(parseFloat(sum.toFixed(2)));
@@ -139,39 +142,51 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
   };
 
   const onSubmit = (values: FormValues) => {
-    // Validação forte de arredondamento
-    if (Math.abs(somaParcelas - values.valorTotal) > 0.05) {
-      form.setError("valorTotal", { type: "manual", message: `A soma das parcelas (R$ ${somaParcelas}) difere do total` });
-      return;
-    }
+    if (values.recorrente) {
+      const request = {
+        pessoaId: values.pessoaId,
+        descricao: values.descricao,
+        tipo: values.tipo,
+        valorTotal: values.valorTotal,
+        dataInicio: values.dataInicio,
+        dataFim: values.dataFim || undefined,
+        observacao: values.observacao,
+        recorrente: true,
+        periodicidade: "MENSAL" as const,
+        diaVencimento: values.diaVencimento || undefined,
+        valorParcelaRecorrente: values.valorTotal,
+      };
 
-    // Backend doesn't support receiving manual parcelas list mapping yet in DividaRequest.
-    // It takes `parcelas` count and generates them.
-    // FUTURE UPGRADE: Change backend to accept `listaParcelas` for true manual editing.
-    // For now, we will submit the basic request. A true SaaS would update the Backend DTO as well.
-    const request = {
-      pessoaId: values.pessoaId,
-      descricao: values.descricao,
-      tipo: values.tipo,
-      valorTotal: values.valorTotal,
-      dataInicio: values.dataInicio,
-      observacao: values.observacao,
-      parcelas: values.parcelasCount
-    };
-
-    criarMutation.mutate(request, {
-      onSuccess: () => {
-        form.reset();
-        onOpenChange(false);
+      criarMutation.mutate(request, {
+        onSuccess: () => { form.reset(); onOpenChange(false); }
+      });
+    } else {
+      if (Math.abs(somaParcelas - values.valorTotal) > 0.05) {
+        form.setError("valorTotal", { type: "manual", message: `A soma das parcelas (R$ ${somaParcelas}) difere do total` });
+        return;
       }
-    });
+
+      const request = {
+        pessoaId: values.pessoaId,
+        descricao: values.descricao,
+        tipo: values.tipo,
+        valorTotal: values.valorTotal,
+        dataInicio: values.dataInicio,
+        observacao: values.observacao,
+        parcelas: values.parcelasCount,
+      };
+
+      criarMutation.mutate(request, {
+        onSuccess: () => { form.reset(); onOpenChange(false); }
+      });
+    }
   };
 
   const onPessoaCriada = (novaPessoaId?: number) => {
-    if (novaPessoaId) {
-       form.setValue("pessoaId", novaPessoaId);
-    }
-  }
+    if (novaPessoaId) form.setValue("pessoaId", novaPessoaId);
+  };
+
+  const isSubmitDisabled = isPending || (!watchRecorrente && Math.abs(somaParcelas - watchValorTotal) > 0.05);
 
   return (
     <>
@@ -271,13 +286,49 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                 )}
               />
 
+              {/* ─── Toggle Recorrente ─── */}
+              <FormField
+                control={form.control}
+                name="recorrente"
+                render={({ field }) => (
+                  <FormItem>
+                    <div 
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                        field.value 
+                          ? 'border-primary/60 bg-primary/10' 
+                          : 'border-border/30 bg-black/20 hover:bg-black/30'
+                      }`}
+                      onClick={() => field.onChange(!field.value)}
+                    >
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${field.value ? 'bg-primary' : 'bg-zinc-700'}`}>
+                        <div 
+                          className="w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all"
+                          style={{ left: field.value ? '22px' : '2px' }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-white flex items-center gap-2">
+                          <RefreshCw className={`h-3.5 w-3.5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                          Dívida Recorrente
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {field.value 
+                            ? "Gera uma cobrança todo mês automaticamente" 
+                            : "Ativar para cobranças mensais automáticas"}
+                        </div>
+                      </div>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="valorTotal"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Valor Total (R$)</FormLabel>
+                      <FormLabel>{watchRecorrente ? "Valor Mensal (R$)" : "Valor Total (R$)"}</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -292,32 +343,89 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="parcelasCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nº Parcelas</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          className="bg-black/40 border-border/50" 
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {watchRecorrente ? (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="diaVencimento"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dia do Vencimento</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="31" 
+                              placeholder="Ex: 10"
+                              className="bg-black/40 border-border/50" 
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dataFim"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data Fim (Opcional)</FormLabel>
+                          <FormControl>
+                            <Input type="date" className="bg-black/40 border-border/50" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="parcelasCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nº Parcelas</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              className="bg-black/40 border-border/50" 
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dataInicio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data 1ª Parcela</FormLabel>
+                          <FormControl>
+                            <Input type="date" className="bg-black/40 border-border/50" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
 
+              {watchRecorrente && (
                 <FormField
                   control={form.control}
                   name="dataInicio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data 1ª Parcela</FormLabel>
+                      <FormLabel>Data de Início</FormLabel>
                       <FormControl>
                         <Input type="date" className="bg-black/40 border-border/50" {...field} />
                       </FormControl>
@@ -325,15 +433,17 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                     </FormItem>
                   )}
                 />
-              </div>
+              )}
 
-              {/* Tabela de Preview Inteligente */}
-              {showPreview && manualParcelas.length > 0 && (
+              {/* Preview das Parcelas (modo parcelado) */}
+              {!watchRecorrente && showPreview && manualParcelas.length > 0 && (
                 <div className="mt-6 border border-border/30 rounded-lg overflow-hidden bg-black/20">
                   <div className="bg-primary/10 px-4 py-2 border-b border-border/30 flex justify-between items-center">
                     <span className="text-sm font-semibold text-primary">Preview das Parcelas</span>
                     {somaParcelas !== watchValorTotal && (
-                       <span className="text-xs text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded">Divergência: R$ {Math.abs(somaParcelas - watchValorTotal).toFixed(2)}</span>
+                       <span className="text-xs text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded">
+                         Divergência: R$ {Math.abs(somaParcelas - watchValorTotal).toFixed(2)}
+                       </span>
                     )}
                   </div>
                   <div className="max-h-48 overflow-y-auto p-2 space-y-2">
@@ -354,7 +464,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                             value={p.valor}
                             onChange={(e) => handleManualEdit(idx, 'valor', e.target.value)}
                             className={`h-8 pl-7 text-xs font-mono font-medium bg-black/40 text-right ${p.valor < 0 ? 'text-red-400' : ''}`}
-                            disabled // Desabilitado visualmente pois o backend ainda gera automático, mas a UI reflete SaaS
+                            disabled
                           />
                         </div>
                       </div>
@@ -362,6 +472,21 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                   </div>
                   <div className="bg-black/40 px-4 py-2 text-right border-t border-border/30 text-xs text-muted-foreground">
                     Total: <strong className="text-white">R$ {somaParcelas.toFixed(2)}</strong>
+                  </div>
+                </div>
+              )}
+
+              {/* Resumo Recorrência */}
+              {watchRecorrente && watchValorTotal > 0 && (
+                <div className="border border-primary/30 rounded-lg bg-primary/5 p-4">
+                  <div className="text-xs text-primary font-semibold mb-1 flex items-center gap-1.5">
+                    <RefreshCw className="h-3 w-3" />
+                    Resumo da Recorrência
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Será gerada uma cobrança de <strong className="text-white">R$ {watchValorTotal.toFixed(2)}</strong> todo mês
+                    {form.watch("diaVencimento") ? ` no dia ${form.watch("diaVencimento")}` : ""}.
+                    {form.watch("dataFim") ? ` Até ${format(new Date(form.watch("dataFim") + "T12:00:00"), "dd/MM/yyyy")}.` : " Sem data fim definida."}
                   </div>
                 </div>
               )}
@@ -391,10 +516,10 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isPending || Math.abs(somaParcelas - watchValorTotal) > 0.05}
+                  disabled={isSubmitDisabled}
                   className="bg-primary text-black hover:bg-primary/90 min-w-[120px]"
                 >
-                  {isPending ? "Processando..." : "Confirmar Dívida"}
+                  {isPending ? "Processando..." : watchRecorrente ? "Confirmar Recorrência" : "Confirmar Dívida"}
                 </Button>
               </div>
             </form>
@@ -402,7 +527,6 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
         </DialogContent>
       </Dialog>
 
-      {/* Inline Modal para Nova Pessoa */}
       <PessoaFormDialog 
         open={inlinePessoaOpen} 
         onOpenChange={setInlinePessoaOpen} 

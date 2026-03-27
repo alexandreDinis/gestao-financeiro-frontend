@@ -9,17 +9,21 @@ import { DividaTimeline } from "./divida-timeline";
 import { DividaFormDialog } from "./divida-form-dialog";
 import { PagarParcelaDialog } from "./pagar-parcela-dialog";
 import { DividaDetalhesDialog } from "./divida-detalhes-dialog";
+import { DividaFilters } from "./divida-filters";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Divida, ParcelaDivida } from "../types";
-import { formatCurrency } from "@/lib/utils";
+import { Divida, ParcelaDivida, StatusDivida } from "../types";
+import { formatCurrency, cn } from "@/lib/utils";
 import { 
   MoreVertical, 
   Trash2, 
   Eye,
   PlusCircle,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Filter,
+  FileText
 } from "lucide-react";
+import { DividasService } from "../services/dividas.service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +38,15 @@ interface DividasListProps {
 }
 
 export function DividasList({ tipo }: DividasListProps) {
-  const { data: dividas, isLoading } = useDividasQuery(tipo);
+  const [pessoaId, setPessoaId] = useState<number | undefined>();
+  const [ano, setAno] = useState<number | undefined>();
+  const [mes, setMes] = useState<number | undefined>();
+  const [status, setStatus] = useState<StatusDivida | undefined>();
+
+  const { data: resumo, isLoading } = useDividasQuery(tipo, pessoaId, ano, mes, status);
+  const dividas = resumo?.items || [];
+  const totalGeral = resumo?.totalGeral || 0;
+
   const deletarMutation = useDeletarDividaMutation();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -48,6 +60,19 @@ export function DividasList({ tipo }: DividasListProps) {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [dividaToDelete, setDividaToDelete] = useState<number | null>(null);
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      await DividasService.exportarPdf(tipo, pessoaId, ano, mes, status);
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleDelete = (id: number) => {
     setDividaToDelete(id);
     setConfirmDeleteOpen(true);
@@ -58,6 +83,13 @@ export function DividasList({ tipo }: DividasListProps) {
       deletarMutation.mutate(dividaToDelete);
       setConfirmDeleteOpen(false);
     }
+  };
+
+  const clearFilters = () => {
+    setPessoaId(undefined);
+    setAno(undefined);
+    setMes(undefined);
+    setStatus(undefined);
   };
 
   if (isLoading) {
@@ -73,18 +105,70 @@ export function DividasList({ tipo }: DividasListProps) {
     ? "Nenhum dinheiro a receber registrado." 
     : "Nenhuma dívida a pagar registrada.";
 
+  const isFiltradoMes = !!(ano && mes);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-medium text-white flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isReceber ? 'bg-green-500' : 'bg-red-500'}`} />
           {isReceber ? "Listagem a Receber" : "Listagem a Pagar"}
         </h3>
         
-        <Button onClick={() => setFormOpen(true)} className="bg-primary text-black hover:bg-primary/90">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Registrar Operação
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportPdf} 
+            disabled={isExporting || dividas.length === 0}
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary transition-all shadow-lg shadow-primary/5"
+          >
+            {isExporting ? (
+              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" />
+            )}
+            Gerar Extrato PDF
+          </Button>
+
+          <Button onClick={() => setFormOpen(true)} className="bg-primary text-black hover:bg-primary/90">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Registrar Operação
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
+        <div className="lg:col-span-4 glass-panel p-5 rounded-xl border border-border/40 flex flex-col justify-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Filter className="h-12 w-12" />
+          </div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5 font-semibold">
+             {isFiltradoMes ? `Total no mês (${mes}/${ano})` : "Valor Total Restante"}
+          </div>
+          <div className={`text-3xl font-bold tracking-tight ${isReceber ? 'text-green-500' : 'text-red-500'}`}>
+            {formatCurrency(totalGeral)}
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isReceber ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+              {pessoaId ? "Filtrado por contato" : "Visualização consolidada"}
+            </div>
+          </div>
+        </div>
+        
+        <div className="lg:col-span-8 glass-panel p-5 rounded-xl border border-border/40 flex items-center bg-black/5">
+           <DividaFilters 
+             pessoaId={pessoaId}
+             onPessoaChange={setPessoaId}
+             ano={ano}
+             onAnoChange={setAno}
+             mes={mes}
+             onMesChange={setMes}
+             status={status}
+             onStatusChange={setStatus}
+             onClear={clearFilters}
+           />
+        </div>
       </div>
 
       <div className="glass-panel rounded-xl border border-border/40 overflow-hidden">
@@ -94,8 +178,8 @@ export function DividasList({ tipo }: DividasListProps) {
               <tr>
                 <th className="px-4 py-3 font-medium">Descrição / Pessoa</th>
                 <th className="px-4 py-3 font-medium">Progressão (Timeline)</th>
-                <th className="px-4 py-3 font-medium text-right">Valor Total</th>
-                <th className="px-4 py-3 font-medium text-right">Restante</th>
+                <th className="px-4 py-3 font-medium text-right">{isFiltradoMes ? "Valor no Mês" : "Valor Total"}</th>
+                <th className="px-4 py-3 font-medium text-right">{isFiltradoMes ? "Situação Mês" : "Restante"}</th>
                 <th className="px-4 py-3 text-right font-medium">Ações</th>
               </tr>
             </thead>
@@ -112,22 +196,30 @@ export function DividasList({ tipo }: DividasListProps) {
                   const percentualPago = divida.valorTotal > 0 
                     ? ((divida.valorTotal - divida.valorRestante) / divida.valorTotal) * 100 
                     : 0;
+                  
+                  const valorNoMes = divida.parcelas.reduce((acc, p) => acc + p.valor, 0);
 
                   return (
                     <tr key={divida.id} className="border-b border-border/20 last:border-0 hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-medium text-white text-[15px]">{divida.pessoaNome}</div>
                         <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                          <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold tracking-wider">Motivo</span>
                           {divida.descricao}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-1 px-1.5 py-0.5 bg-black/40 rounded w-fit">
-                          Início: {format(new Date(divida.dataInicio), "dd/MM/yyyy")}
-                        </div>
+                        {isFiltradoMes ? (
+                           <div className="text-[10px] text-muted-foreground mt-1 px-1.5 py-0.5 bg-black/40 rounded w-fit">
+                             Dívida Principal: {formatCurrency(divida.valorRestante)} restante
+                           </div>
+                        ) : (
+                          <div className="text-[10px] text-muted-foreground mt-1 px-1.5 py-0.5 bg-black/40 rounded w-fit">
+                            Início: {format(new Date(divida.dataInicio), "dd/MM/yyyy")}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 min-w-[200px]">
                         <DividaTimeline 
                           parcelas={divida.parcelas} 
+                          totalParcelas={divida.totalParcelas}
                           dividaId={divida.id} 
                           onPagar={(p) => {
                             setSelectedParcela(p);
@@ -136,15 +228,36 @@ export function DividasList({ tipo }: DividasListProps) {
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                         <span className={isReceber ? "text-green-500" : "text-white"}>
-                           {formatCurrency(divida.valorTotal)}
-                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                         <div className="font-bold text-white">
-                           {formatCurrency(divida.valorRestante)}
+                         <div className={cn("text-lg", isReceber ? "text-green-500" : "text-white")}>
+                            {formatCurrency(isFiltradoMes ? valorNoMes : divida.valorTotal)}
                          </div>
-                         <div className="text-[10px] text-muted-foreground">{percentualPago.toFixed(0)}% pago</div>
+                         {isFiltradoMes && (
+                           <div className="text-[10px] text-muted-foreground">Parcela do Extrato</div>
+                         )}
+                      </td>
+                        <td className="px-4 py-3 text-right">
+                          {isFiltradoMes ? (
+                            <>
+                              <div className={cn("font-bold", divida.parcelas.every(p => p.status === 'PAGO') ? 'text-green-500' : 'text-white')}>
+                                {divida.parcelas.length > 0 && (
+                                  <span className="text-muted-foreground/60 font-medium text-[10px] mr-1.5 align-middle">
+                                    {divida.parcelas[0].numeroParcela}/{divida.totalParcelas}
+                                  </span>
+                                )}
+                                <span className="align-middle">
+                                  {divida.parcelas.every(p => p.status === 'PAGO') ? 'Liquidado' : 'Pendente'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">Este mês</div>
+                            </>
+                         ) : (
+                           <>
+                             <div className="font-bold text-white">
+                               {formatCurrency(divida.valorRestante)}
+                             </div>
+                             <div className="text-[10px] text-muted-foreground">{percentualPago.toFixed(0)}% pago</div>
+                           </>
+                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <DropdownMenu>
