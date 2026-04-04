@@ -30,13 +30,19 @@ const statusColors: Record<StatusTransacao, { border: string, text: string, bg: 
 };
 
 export function DividaDetalhesDialog({ open, onOpenChange, divida: initialDivida }: DividaDetalhesDialogProps) {
-  const { data: fullDivida, isLoading } = useDividaQuery(initialDivida?.id || 0);
+  const dividaId = initialDivida?.id;
   
-  const divida = fullDivida || initialDivida;
+  const { data: fullDivida, isLoading } = useDividaQuery(dividaId ?? 0, {
+    enabled: !!dividaId && open
+  });
+  
+  const divida = (fullDivida || initialDivida) as Divida | null;
 
+  if (!dividaId && !open) return null;
   if (!divida) return null;
 
   const isReceber = divida.tipo === "A_RECEBER";
+  const nomeExibicao = initialDivida?.nomeDivida || (divida as any).descricao || "Dívida";
   
   // Sort parcelas by NumeroParcela
   const parcelasOrdenadas = [...divida.parcelas].sort((a, b) => a.numeroParcela - b.numeroParcela);
@@ -45,9 +51,9 @@ export function DividaDetalhesDialog({ open, onOpenChange, divida: initialDivida
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-panel border-border/40 sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Deatlhes da Operação</DialogTitle>
+          <DialogTitle>{nomeExibicao}</DialogTitle>
           <DialogDescription>
-            Histórico completo de pagamentos e parcelas pendentes com {divida.pessoaNome}.
+            Histórico completo de pagamentos e parcelas pendentes com {divida.pessoaNome || 'Contato'}.
           </DialogDescription>
         </DialogHeader>
 

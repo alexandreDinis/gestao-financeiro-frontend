@@ -38,23 +38,45 @@ export function DashboardRecentTransactions({ recentes, proximos, loading }: Pro
     return (
       <div className="space-y-3 pr-2 custom-scrollbar overflow-y-auto max-h-[320px] pt-1">
         {transactions.map((tx, idx) => {
-          const id = isVencimento ? (tx as Vencimento).transacaoId : (tx as UltimaTransacao).id;
+          const key = isVencimento ? (tx as Vencimento).idUnico : `tx-${(tx as UltimaTransacao).id}-${idx}`;
+
           const data = isVencimento ? (tx as Vencimento).dataVencimento : (tx as UltimaTransacao).data;
-          const tipo = (tx as UltimaTransacao).tipo || 'DESPESA';
+          const tipo = isVencimento ? (tx as Vencimento).tipo : ((tx as UltimaTransacao).tipo || 'DESPESA');
+          
+          const isAtrasado = isVencimento && (tx as Vencimento).atrasado;
+          const isVenceHoje = isVencimento && (tx as Vencimento).venceHoje;
 
           return (
             <div 
-              key={`${id}-${idx}`} 
-              className="flex items-center justify-between p-3 rounded-xl bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/10 transition-all duration-300 group"
+              key={key} 
+              className={`flex items-center justify-between p-3 rounded-xl transition-all duration-300 group border
+                ${isAtrasado 
+                  ? 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30' 
+                  : isVenceHoje
+                    ? 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20 hover:border-yellow-500/30'
+                    : 'bg-black/20 border-white/5 hover:bg-black/40 hover:border-white/10'}`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-full shrink-0 group-hover:scale-110 transition-transform ${tipo === 'RECEITA' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
+                <div className={`p-2.5 rounded-full shrink-0 group-hover:scale-110 transition-transform 
+                  ${tipo === 'RECEITA' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
                   {tipo === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate max-w-[140px] md:max-w-full">
-                    {tx.descricao}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white truncate max-w-[140px] md:max-w-full">
+                      {tx.descricao}
+                    </p>
+                    {isAtrasado && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-500 text-white uppercase tracking-wider">
+                        Atrasado
+                      </span>
+                    )}
+                    {isVenceHoje && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-yellow-500 text-black uppercase tracking-wider">
+                        Hoje
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock size={10} />

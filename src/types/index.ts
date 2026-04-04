@@ -66,6 +66,16 @@ export enum DirecaoLancamento {
   DEBITO = "DEBITO",
   CREDITO = "CREDITO",
 }
+
+export enum OrigemVencimento {
+  TRANSACAO = "TRANSACAO",
+  PARCELA = "PARCELA",
+}
+
+export enum TipoMovimentacao {
+  RECEITA = "RECEITA",
+  DESPESA = "DESPESA",
+}
  
 export type TipoDespesa = "FIXA" | "VARIAVEL";
 export type TipoRecorrencia = "FIXA" | "VARIAVEL";
@@ -230,12 +240,18 @@ export interface UltimaTransacao {
 }
 
 export interface Vencimento {
-  transacaoId: number;
+  idUnico: string;
+  transacaoId?: number | null;
+  parcelaId?: number | null;
   descricao: string;
   valor: number;
   dataVencimento: string;
   diasRestantes: number;
   conta: string;
+  origem: OrigemVencimento;
+  tipo: TipoMovimentacao;
+  atrasado: boolean;
+  venceHoje: boolean;
 }
 
 export interface ProximosVencimentosDashboard {
