@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { format, addMonths } from "date-fns";
 import {
   Dialog,
@@ -33,9 +31,10 @@ import { useCriarDividaMutation } from "../hooks/use-dividas-mutation";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
 import { RefreshCw } from "lucide-react";
+import { toast } from "@/lib/toast";
 
 interface FormValues {
-  pessoaId: number;
+  pessoaId?: number;
   descricao: string;
   tipo: "A_RECEBER" | "A_PAGAR";
   valorTotal: number;
@@ -47,18 +46,7 @@ interface FormValues {
   dataFim?: string;
 }
 
-const formSchema = z.object({
-  pessoaId: z.number().min(1, "Selecione uma pessoa"),
-  descricao: z.string().min(3, "Descrição muito curta"),
-  tipo: z.enum(["A_RECEBER", "A_PAGAR"]),
-  valorTotal: z.number().positive("Valor deve ser maior que zero"),
-  dataInicio: z.string().min(1, "Data de Início é obrigatória"),
-  parcelasCount: z.number().min(1, "No mínimo 1 parcela"),
-  observacao: z.string().optional(),
-  recorrente: z.boolean(),
-  diaVencimento: z.number().min(1).max(31).optional(),
-  dataFim: z.string().optional(),
-}) satisfies z.ZodType<FormValues>;
+
 
 interface DividaFormDialogProps {
   open: boolean;
@@ -77,9 +65,8 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
   const [somaParcelas, setSomaParcelas] = useState(0);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
     defaultValues: {
-      pessoaId: 0,
+      pessoaId: undefined,
       descricao: "",
       tipo: tipoDefault,
       valorTotal: 0,
@@ -142,6 +129,18 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
   };
 
   const onSubmit = (values: FormValues) => {
+    // Validação manual explícita
+    const errors: string[] = [];
+    if (!values.descricao || values.descricao.length < 3) errors.push("Descrição deve ter no mínimo 3 caracteres");
+    if (!values.valorTotal || values.valorTotal <= 0) errors.push("Valor deve ser maior que zero");
+    if (!values.dataInicio) errors.push("Data de Início é obrigatória");
+    if (!values.recorrente && (!values.parcelasCount || values.parcelasCount < 1)) errors.push("No mínimo 1 parcela");
+
+    if (errors.length > 0) {
+      toast.error("Campos inválidos", errors.join(", "));
+      return;
+    }
+
     if (values.recorrente) {
       const request = {
         pessoaId: values.pessoaId,
@@ -162,7 +161,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
       });
     } else {
       if (Math.abs(somaParcelas - values.valorTotal) > 0.05) {
-        form.setError("valorTotal", { type: "manual", message: `A soma das parcelas (R$ ${somaParcelas}) difere do total` });
+        toast.error("Divergência", `A soma das parcelas (R$ ${somaParcelas}) difere do total (R$ ${values.valorTotal})`);
         return;
       }
 
@@ -200,7 +199,10 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit(form.getValues());
+            }} className="space-y-4 py-2">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -334,8 +336,11 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                           type="number" 
                           step="0.01" 
                           className="bg-black/40 border-border/50 text-white font-bold" 
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? 0 : Number(val));
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -358,8 +363,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                               max="31" 
                               placeholder="Ex: 10"
                               className="bg-black/40 border-border/50" 
-                              {...field}
-                              value={field.value || ""}
+                              value={field.value ?? ""}
                               onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                             />
                           </FormControl>
@@ -374,7 +378,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                         <FormItem>
                           <FormLabel>Data Fim (Opcional)</FormLabel>
                           <FormControl>
-                            <Input type="date" className="bg-black/40 border-border/50" {...field} value={field.value || ""} />
+                            <Input type="date" className="bg-black/40 border-border/50" autoComplete="off" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -394,7 +398,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                               type="number" 
                               min="1" 
                               className="bg-black/40 border-border/50" 
-                              {...field}
+                              value={field.value ?? ""}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                             />
                           </FormControl>
@@ -409,7 +413,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                         <FormItem>
                           <FormLabel>Data 1ª Parcela</FormLabel>
                           <FormControl>
-                            <Input type="date" className="bg-black/40 border-border/50" {...field} />
+                            <Input type="date" className="bg-black/40 border-border/50" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value)} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -427,7 +431,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                     <FormItem>
                       <FormLabel>Data de Início</FormLabel>
                       <FormControl>
-                        <Input type="date" className="bg-black/40 border-border/50" {...field} />
+                        <Input type="date" className="bg-black/40 border-border/50" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -502,7 +506,8 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
                         placeholder="Ex: Empréstimo sem juros acordado verbalmente, ou chaves PIX de preferência..." 
                         className="bg-black/40 border-border/50 resize-none" 
                         rows={2}
-                        {...field} 
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value)}
                       />
                     </FormControl>
                     <FormMessage />

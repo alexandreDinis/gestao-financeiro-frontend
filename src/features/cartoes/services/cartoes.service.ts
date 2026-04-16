@@ -39,8 +39,11 @@ export const CartoesService = {
     return data.data;
   },
 
-  pagarFatura: async (faturaId: number): Promise<FaturaCartao> => {
-    const { data } = await api.put<ApiResponse<FaturaCartao>>(`/cartoes/faturas/${faturaId}/pagar`);
+  pagarFatura: async (faturaId: number, contaId: number, dataPagamento: string): Promise<FaturaCartao> => {
+    const { data } = await api.put<ApiResponse<FaturaCartao>>(`/cartoes/faturas/${faturaId}/pagar`, {
+      contaId,
+      dataPagamento,
+    });
     return data.data;
   },
 

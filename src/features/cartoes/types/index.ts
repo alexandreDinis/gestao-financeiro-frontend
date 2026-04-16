@@ -2,12 +2,12 @@ export type StatusFatura = 'ABERTA' | 'FECHADA' | 'PAGA' | 'ATRASADA';
 
 export interface Parcela {
   id: number;
-  transacaoId: number;
   numeroParcela: number;
   totalParcelas: number;
   valorParcela: number;
   dataVencimento: string;
   paga: boolean;
+  descricaoTransacao: string;
 }
 
 export interface FaturaCartao {
@@ -28,7 +28,15 @@ export interface CartaoCredito {
   contaId: number;
   contaNome: string;
   bandeira: string;
-  limite: number;
+  limiteTotal: number;
+  utilizado: number;
+  disponivel: number;
+  valorFaturaAberta: number;
+  valorFaturasFechadas: number;
+  valorTotalDevido: number;
+  melhorDiaCompra: number;
+  diasParaFechar: number;
+  dataVencimentoFaturaAtual: string;
   diaFechamento: number;
   diaVencimento: number;
   createdAt: string;

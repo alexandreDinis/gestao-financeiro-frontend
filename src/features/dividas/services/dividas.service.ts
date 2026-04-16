@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios";
-import { Divida, DividaRequest, TipoDivida, PagarParcelaRequest, DividasResumo, StatusDivida } from "../types";
+import { Divida, DividaRequest, TipoDivida, PagarParcelaRequest, PagarMultiplasParcelasRequest, DividasResumo, StatusDivida } from "../types";
 
 export const DividasService = {
   listar: async (tipo?: TipoDivida, pessoaId?: number, ano?: number, mes?: number, status?: StatusDivida): Promise<DividasResumo> => {
@@ -32,8 +32,17 @@ export const DividasService = {
     return data.data;
   },
 
+  pagarMultiplasParcelas: async (request: PagarMultiplasParcelasRequest): Promise<any> => {
+    const { data } = await api.put("/dividas/parcelas/pagar-lote", request);
+    return data.data;
+  },
+
   deletar: async (id: number): Promise<void> => {
     await api.delete(`/dividas/${id}`);
+  },
+
+  processarRecorrencias: async (): Promise<void> => {
+    await api.post("/dividas/processar-recorrencias");
   },
 
   exportarPdf: async (tipo?: TipoDivida, pessoaId?: number, ano?: number, mes?: number, status?: StatusDivida): Promise<void> => {

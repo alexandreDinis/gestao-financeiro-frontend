@@ -48,11 +48,11 @@ export function CartaoFormDialog({ open, onOpenChange, cartaoParaEditar }: Carta
     reset,
     formState: { errors },
   } = useForm<CartaoFormValues>({
-    resolver: zodResolver(cartaoSchema),
+    resolver: zodResolver(cartaoSchema) as any,
     defaultValues: {
       nomeCartao: cartaoParaEditar?.contaNome || "",
       bandeira: cartaoParaEditar?.bandeira || "Mastercard",
-      limite: cartaoParaEditar?.limite || 0,
+      limite: cartaoParaEditar?.limiteTotal || 0,
       diaFechamento: cartaoParaEditar?.diaFechamento || 25,
       diaVencimento: cartaoParaEditar?.diaVencimento || 5,
     },

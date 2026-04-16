@@ -301,7 +301,7 @@ export default function ContasPage() {
               <Label htmlFor="conta-tipo">Tipo</Label>
               <Select
                 value={form.tipo}
-                onValueChange={(val) => setForm({ ...form, tipo: val as TipoConta })}
+                onValueChange={(val) => setForm({ ...form, tipo: (val as TipoConta) || TipoConta.CORRENTE })}
               >
                 <SelectTrigger id="conta-tipo" className="bg-black/40 border-border/50">
                   <SelectValue placeholder="Selecione o tipo" />
