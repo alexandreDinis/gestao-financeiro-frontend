@@ -15,12 +15,13 @@ export function useDividasQuery(tipo?: TipoDivida, pessoaId?: number, ano?: numb
   });
 }
 
-export function useDividaQuery(id: number) {
+export function useDividaQuery(id: number, options?: any) {
   const { user } = useAuth();
 
   return useQuery({
     queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId, id],
     queryFn: () => DividasService.buscarPorId(id),
-    enabled: !!user?.tenantId,
+    enabled: !!user?.tenantId && !!id && id !== 0,
+    ...options
   });
 }

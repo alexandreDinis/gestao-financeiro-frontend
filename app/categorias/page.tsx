@@ -183,7 +183,7 @@ export default function CategoriasPage() {
             {/* Filter */}
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-muted-foreground" />
-              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+              <Select value={tipoFilter} onValueChange={(val) => setTipoFilter(val || "ALL")}>
                 <SelectTrigger className="w-[160px] bg-black/40 border-border/50 h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -348,7 +348,7 @@ export default function CategoriasPage() {
               <Label htmlFor="cat-tipo">Tipo</Label>
               <Select
                 value={form.tipo}
-                onValueChange={(val) => setForm({ ...form, tipo: val as TipoCategoria })}
+                onValueChange={(val) => setForm({ ...form, tipo: (val as TipoCategoria) || TipoCategoria.DESPESA })}
               >
                 <SelectTrigger id="cat-tipo" className="bg-black/40 border-border/50">
                   <SelectValue placeholder="Selecione o tipo" />
@@ -375,7 +375,7 @@ export default function CategoriasPage() {
               <Select
                 value={form.categoriaPaiId?.toString() || "NONE"}
                 onValueChange={(val) =>
-                  setForm({ ...form, categoriaPaiId: val === "NONE" ? null : Number(val) })
+                  setForm({ ...form, categoriaPaiId: (!val || val === "NONE") ? null : Number(val) })
                 }
               >
                 <SelectTrigger id="cat-pai" className="bg-black/40 border-border/50">

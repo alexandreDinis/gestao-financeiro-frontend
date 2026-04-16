@@ -1,4 +1,4 @@
-import { ScoreConfiabilidade } from "../../types";
+import { ScoreConfiabilidade } from "../types";
 import {
   Tooltip,
   TooltipContent,

@@ -4,7 +4,7 @@ import { DIVIDAS_QUERY_KEY } from "./use-dividas-query";
 import { PESSOAS_QUERY_KEY } from "@/features/pessoas/hooks/use-pessoas-query";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/lib/toast";
-import { Divida, PagarParcelaRequest } from "../types";
+import { Divida, PagarParcelaRequest, PagarMultiplasParcelasRequest } from "../types";
 
 export function useCriarDividaMutation() {
   const queryClient = useQueryClient();
@@ -84,6 +84,28 @@ export function usePagarParcelaMutation() {
   });
 }
 
+export function usePagarMultiplasParcelasMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: (request: PagarMultiplasParcelasRequest) => 
+      DividasService.pagarMultiplasParcelas(request),
+    onSuccess: (_data, variables) => {
+      const count = variables.parcelaIds.length;
+      toast.success("Pagamento em Lote", `${count} parcela(s) quitadas com sucesso.`);
+    },
+    onError: (error: any) => {
+      toast.error("Erro no Pagamento", error.response?.data?.message || "Não foi possível processar o pagamento em lote.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+  });
+}
+
 export function useDeletarDividaMutation() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -98,6 +120,23 @@ export function useDeletarDividaMutation() {
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível excluir a dívida.");
+    }
+  });
+}
+
+export function useProcessarRecorrenciasMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: DividasService.processarRecorrencias,
+    onSuccess: () => {
+      toast.success("Recorrências Atualizadas", "O processamento de dívidas recorrentes foi concluído.");
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível processar as recorrências.");
     }
   });
 }

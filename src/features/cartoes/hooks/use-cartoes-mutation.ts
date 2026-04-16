@@ -90,16 +90,19 @@ export function usePagarFaturaMutation() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: ({ faturaId, cartaoId }: { faturaId: number, cartaoId: number }) => CartoesService.pagarFatura(faturaId),
+    mutationFn: ({ faturaId, cartaoId, contaId, dataPagamento }: { faturaId: number, cartaoId: number, contaId: number, dataPagamento: string }) =>
+      CartoesService.pagarFatura(faturaId, contaId, dataPagamento),
     onSuccess: (_, variables) => {
-      toast.success("Fatura Paga", "O pagamento da fatura consolidada foi registrado com sucesso.");
+      toast.success("Fatura Paga", "O pagamento da fatura foi registrado e o saldo da conta foi atualizado.");
       queryClient.invalidateQueries({ queryKey: [FATURAS_QUERY_KEY, user?.tenantId, variables.cartaoId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
-      queryClient.invalidateQueries({ queryKey: ["contas"] }); // Abate o saldo da conta destino do pagamento
+      queryClient.invalidateQueries({ queryKey: ["contas"] });
+      queryClient.invalidateQueries({ queryKey: ["transacoes"] });
     },
     onError: (error: any) => {
       toast.error("Erro no Pagamento", error.response?.data?.message || "Não foi possível liquidar a fatura.");
     }
   });
 }
+

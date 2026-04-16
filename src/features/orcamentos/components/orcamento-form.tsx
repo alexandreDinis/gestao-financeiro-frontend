@@ -70,7 +70,7 @@ export function OrcamentoFormDialog({ open, onOpenChange, orcamento, mesContexto
   });
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       categoriaId: 0,
       mesAno: `${anoContexto}-${mesContexto.toString().padStart(2, "0")}`,
@@ -148,7 +148,7 @@ export function OrcamentoFormDialog({ open, onOpenChange, orcamento, mesContexto
                   <FormLabel>Categoria (Despesa)</FormLabel>
                   <Select 
                     value={field.value ? field.value.toString() : ""} 
-                    onValueChange={(v) => field.onChange(Number(v))}
+                    onValueChange={(v) => field.onChange(v ? Number(v) : null)}
                     disabled={isEditing}
                   >
                     <FormControl>

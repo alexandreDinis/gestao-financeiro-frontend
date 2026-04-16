@@ -4,10 +4,12 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { TipoDivida } from "../types";
 import { useDividasQuery } from "../hooks/use-dividas-query";
-import { useDeletarDividaMutation } from "../hooks/use-dividas-mutation";
+import { useDeletarDividaMutation, useProcessarRecorrenciasMutation } from "../hooks/use-dividas-mutation";
 import { DividaTimeline } from "./divida-timeline";
 import { DividaFormDialog } from "./divida-form-dialog";
 import { PagarParcelaDialog } from "./pagar-parcela-dialog";
+import { PagarLoteDialog } from "./pagar-lote-dialog";
+import { PagarLoteMesDialog } from "./pagar-lote-mes-dialog";
 import { DividaDetalhesDialog } from "./divida-detalhes-dialog";
 import { DividaFilters } from "./divida-filters";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -21,7 +23,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Filter,
-  FileText
+  FileText,
+  Layers,
+  Wallet,
+  RefreshCw
 } from "lucide-react";
 import { DividasService } from "../services/dividas.service";
 import {
@@ -48,6 +53,7 @@ export function DividasList({ tipo }: DividasListProps) {
   const totalGeral = resumo?.totalGeral || 0;
 
   const deletarMutation = useDeletarDividaMutation();
+  const processarRecorrenciasMutation = useProcessarRecorrenciasMutation();
   const [formOpen, setFormOpen] = useState(false);
 
   // States for new Sub-Dialogs
@@ -59,6 +65,11 @@ export function DividasList({ tipo }: DividasListProps) {
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [dividaToDelete, setDividaToDelete] = useState<number | null>(null);
+
+  const [loteOpen, setLoteOpen] = useState(false);
+  const [loteDivida, setLoteDivida] = useState<Divida | null>(null);
+
+  const [loteMesOpen, setLoteMesOpen] = useState(false);
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -116,14 +127,35 @@ export function DividasList({ tipo }: DividasListProps) {
         </h3>
         
         <div className="flex gap-2">
+          {isFiltradoMes && dividas.some(d => d.parcelas.some(p => p.status !== 'PAGO' && p.status !== 'CANCELADO')) && (
+            <Button 
+              variant="outline" 
+              onClick={() => setLoteMesOpen(true)}
+              className="border-green-500/50 text-green-500 hover:bg-green-500/10 hover:text-green-400 transition-all shadow-lg shadow-green-500/5"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              {isReceber ? 'Receber Todas do Mês' : 'Pagar Todas do Mês'}
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => processarRecorrenciasMutation.mutate()} 
+            disabled={processarRecorrenciasMutation.isPending}
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary transition-all shadow-lg shadow-primary/5"
+            title="Atualiza e gera as parcelas das dívidas recorrentes que deveriam vencer hoje"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${processarRecorrenciasMutation.isPending ? 'animate-spin' : ''}`} />
+            Atualizar Recorrentes
+          </Button>
+
           <Button 
             variant="outline" 
             onClick={handleExportPdf} 
             disabled={isExporting || dividas.length === 0}
-            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary transition-all shadow-lg shadow-primary/5"
+            className="border-primary/50 text-white hover:bg-white/10 hover:text-white transition-all shadow-lg shadow-white/5"
           >
             {isExporting ? (
-              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
             ) : (
               <FileText className="mr-2 h-4 w-4" />
             )}
@@ -279,7 +311,19 @@ export function DividasList({ tipo }: DividasListProps) {
                                    setPagarOpen(true);
                                  }}>
                                    <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />
-                                   <span>Pagar Próxima</span>
+                                   <span>{isReceber ? 'Receber Próxima' : 'Pagar Próxima'}</span>
+                                 </DropdownMenuItem>
+                               ) : null;
+                            })()}
+                            {(() => {
+                               const pendentes = divida.parcelas.filter(p => p.status === 'PENDENTE' || p.status === 'ATRASADO');
+                               return pendentes.length >= 1 ? (
+                                 <DropdownMenuItem className="cursor-pointer" onClick={() => {
+                                   setLoteDivida(divida);
+                                   setLoteOpen(true);
+                                 }}>
+                                   <Layers className="mr-2 h-4 w-4 text-primary" />
+                                   <span>{isReceber ? 'Receber em Lote' : 'Pagar em Lote'} ({pendentes.length})</span>
                                  </DropdownMenuItem>
                                ) : null;
                             })()}
@@ -324,6 +368,22 @@ export function DividasList({ tipo }: DividasListProps) {
         open={detalhesOpen}
         onOpenChange={setDetalhesOpen}
         divida={selectedDivida}
+      />
+
+      <PagarLoteDialog
+        open={loteOpen}
+        onOpenChange={setLoteOpen}
+        divida={loteDivida}
+        tipo={tipo}
+      />
+
+      <PagarLoteMesDialog
+        open={loteMesOpen}
+        onOpenChange={setLoteMesOpen}
+        dividas={dividas}
+        tipo={tipo}
+        mes={mes}
+        ano={ano}
       />
 
       <ConfirmDialog

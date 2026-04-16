@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransacoes, usePagarTransacao, useCancelarTransacao, useDeleteTransacao, useTornarManualTransacao } from "@/hooks/use-transacoes";
-import { TransacaoResponse, StatusTransacao, TipoTransacao } from "@/types";
+import { LancamentoResponse, StatusTransacao, TipoTransacao, OrigemLancamento } from "@/types";
 import { statusColors, statusLabels, tipoTransacaoColors, tipoTransacaoLabels } from "@/lib/ui-mappers";
 import { canDelete, canEdit } from "@/lib/rbac";
 import { useAuth } from "@/hooks/use-auth";
@@ -94,21 +94,38 @@ export function TransacoesTable({ filters }: { filters: any }) {
   }
 
   // Row Renderer for the standard table
-  const DesktopRow = ({ t }: { t: TransacaoResponse }) => (
-    <TableRow key={t.id} className={`border-border/20 transition-colors group ${t.geradoAutomaticamente ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-white/5'}`}>
+  const DesktopRow = ({ t }: { t: LancamentoResponse }) => (
+    <TableRow key={`${t.origem}-${t.id}`} className={`border-border/20 transition-colors group hover:bg-white/5`}>
       <TableCell className="text-muted-foreground whitespace-nowrap">
-        {t.data.split('-').reverse().join('/')}
+        {t.dataReferencia.split('-').reverse().join('/')}
       </TableCell>
       <TableCell className="font-medium text-white max-w-[200px] truncate" title={t.descricao}>
         <div className="flex items-center gap-2">
           <span className="truncate">{t.descricao}</span>
-          {t.geradoAutomaticamente && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center gap-1 shadow-[0_0_8px_rgba(var(--primary),0.2)]">⚙️ Automático</span>}
-          {t.tipoDespesa === 'FIXA' && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Fixa</span>}
-          {t.tipoDespesa === 'VARIAVEL' && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">Variável</span>}
+          {t.geradoAutomaticamente && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center gap-1 shadow-[0_0_8px_rgba(var(--primary),0.2)]">
+              ⚙️ Automático
+            </span>
+          )}
+          {t.tipoDespesa === 'FIXA' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              Fixa
+            </span>
+          )}
+          {t.tipoDespesa === 'VARIAVEL' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+              Variável
+            </span>
+          )}
+          {t.origem === OrigemLancamento.PARCELA && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center gap-1 shadow-[0_0_8px_rgba(var(--primary),0.2)]">
+              💳 Parcela {t.numeroParcela}/{t.totalParcelas}
+            </span>
+          )}
         </div>
         {t.categoria && (
           <span className="block text-xs font-normal text-muted-foreground mt-0.5 truncate">
-            {t.categoria.nome}
+            {t.categoria}
           </span>
         )}
       </TableCell>
@@ -118,13 +135,12 @@ export function TransacoesTable({ filters }: { filters: any }) {
         </span>
       </TableCell>
       <TableCell>
-         {/* Simple visualization of Account involvement. If it's a transfer, we'd ideally show Origem -> Destino */}
          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-           <Building size={14} className="opacity-50" />
-           <span className="truncate max-w-[120px]">
-             {t.lancamentos[0]?.contaNome || "Conta Padrão"}
-           </span>
-         </div>
+            <Building size={14} className="opacity-50" />
+            <span className="truncate max-w-[120px]">
+              {t.conta || "Conta Padrão"}
+            </span>
+          </div>
       </TableCell>
       <TableCell>
         <Badge className={`text-xs ${statusColors[t.status]}`}>
@@ -147,13 +163,13 @@ export function TransacoesTable({ filters }: { filters: any }) {
             }
           />
           <DropdownMenuContent align="end" className="glass-panel border-border/40 w-[160px]">
-            {canEdit(user) && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
-              <DropdownMenuItem onClick={() => handlePagar(t.id)} className="text-green-400 cursor-pointer focus:bg-green-500/10 focus:text-green-400">
+            {canEdit(user) && t.origem === OrigemLancamento.TRANSACAO && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
+              <DropdownMenuItem onClick={() => handlePagar(t.transacaoId)} className="text-green-400 cursor-pointer focus:bg-green-500/10 focus:text-green-400">
                 <CheckCircle size={14} className="mr-2" /> Pagar
               </DropdownMenuItem>
             )}
             {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
-              <DropdownMenuItem onClick={() => handleCancelar(t.id)} className="text-yellow-400 cursor-pointer focus:bg-yellow-500/10 focus:text-yellow-400">
+              <DropdownMenuItem onClick={() => handleCancelar(t.transacaoId)} className="text-yellow-400 cursor-pointer focus:bg-yellow-500/10 focus:text-yellow-400">
                 <XCircle size={14} className="mr-2" /> Cancelar
               </DropdownMenuItem>
             )}
@@ -163,13 +179,13 @@ export function TransacoesTable({ filters }: { filters: any }) {
             )}
 
             {t.geradoAutomaticamente && (
-              <DropdownMenuItem onClick={() => handleTornarManual(t.id)} className="text-primary cursor-pointer focus:bg-primary/10 focus:text-primary">
+              <DropdownMenuItem onClick={() => handleTornarManual(t.transacaoId)} className="text-primary cursor-pointer focus:bg-primary/10 focus:text-primary">
                 <Hand size={14} className="mr-2" /> Tornar Manual
               </DropdownMenuItem>
             )}
 
-            {canDelete(user) && (
-              <DropdownMenuItem onClick={() => setDeleteConfirmId(t.id)} className="text-destructive cursor-pointer focus:bg-destructive/10 focus:text-destructive">
+            {canDelete(user) && t.origem === OrigemLancamento.TRANSACAO && (
+              <DropdownMenuItem onClick={() => setDeleteConfirmId(t.transacaoId)} className="text-destructive cursor-pointer focus:bg-destructive/10 focus:text-destructive">
                 <Trash2 size={14} className="mr-2" /> Excluir
               </DropdownMenuItem>
             )}
@@ -180,8 +196,8 @@ export function TransacoesTable({ filters }: { filters: any }) {
   );
 
   // Card Renderer for Mobile
-  const MobileCard = ({ t }: { t: TransacaoResponse }) => (
-    <div key={t.id} className="glass-panel border-border/40 p-4 rounded-lg flex flex-col gap-3 relative">
+  const MobileCard = ({ t }: { t: LancamentoResponse }) => (
+    <div key={`${t.origem}-${t.id}`} className="glass-panel border-border/40 p-4 rounded-lg flex flex-col gap-3 relative">
       <div className="flex justify-between items-start">
         <div>
           <h4 className="font-bold text-white text-base flex flex-wrap items-center gap-2">
@@ -189,9 +205,14 @@ export function TransacoesTable({ filters }: { filters: any }) {
             {t.geradoAutomaticamente && <span className="text-[9px] px-1 py-0 rounded bg-primary/20 text-primary border border-primary/30 whitespace-nowrap">⚙️ Automático</span>}
             {t.tipoDespesa === 'FIXA' && <span className="text-[9px] px-1 py-0 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap">Fixa</span>}
             {t.tipoDespesa === 'VARIAVEL' && <span className="text-[9px] px-1 py-0 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 whitespace-nowrap">Variável</span>}
+            {t.origem === OrigemLancamento.PARCELA && (
+              <span className="text-[9px] px-1 py-0 rounded bg-primary/20 text-primary border border-primary/30 whitespace-nowrap">
+                💳 {t.numeroParcela}/{t.totalParcelas}
+              </span>
+            )}
           </h4>
           <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-             <Clock size={12} /> {t.data.split('-').reverse().join('/')}
+             <Clock size={12} /> {t.dataReferencia.split('-').reverse().join('/')}
           </span>
         </div>
         <Badge className={`text-[10px] px-1.5 py-0 h-5 ${statusColors[t.status]}`}>
@@ -202,10 +223,10 @@ export function TransacoesTable({ filters }: { filters: any }) {
       <div className="flex justify-between items-end mt-1">
         <div className="flex flex-col gap-1">
            <span className="text-xs text-muted-foreground">
-             {t.categoria?.nome || "Sem categoria"}
+             {t.categoria || "Sem categoria"}
            </span>
            <span className="text-xs text-muted-foreground flex items-center gap-1">
-             <Building size={12} className="opacity-50" /> {t.lancamentos[0]?.contaNome}
+             <Building size={12} className="opacity-50" /> {t.conta}
            </span>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -267,14 +288,14 @@ export function TransacoesTable({ filters }: { filters: any }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transacoes.map((t) => <DesktopRow key={t.id} t={t} />)}
+              {transacoes.map((t) => <DesktopRow key={`${t.origem}-${t.id}`} t={t} />)}
             </TableBody>
           </Table>
         </div>
 
         {/* Mobile View */}
         <div className="grid grid-cols-1 gap-4 md:hidden">
-          {transacoes.map((t) => <MobileCard key={t.id} t={t} />)}
+          {transacoes.map((t) => <MobileCard key={`${t.origem}-${t.id}`} t={t} />)}
         </div>
       </div>
 

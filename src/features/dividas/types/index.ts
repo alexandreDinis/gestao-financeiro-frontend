@@ -5,6 +5,8 @@ export type Periodicidade = 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'ANU
 
 export interface ParcelaDivida {
   id: number;
+  dividaId: number;
+  nomeDivida: string;
   numeroParcela: number;
   valor: number;
   dataVencimento: string;
@@ -15,9 +17,10 @@ export interface ParcelaDivida {
 
 export interface Divida {
   id: number;
-  pessoaId: number;
-  pessoaNome: string;
+  pessoaId?: number;
+  pessoaNome?: string;
   descricao: string;
+  nomeDivida?: string;
   tipo: TipoDivida;
   valorTotal: number;
   valorRestante: number;
@@ -35,7 +38,7 @@ export interface Divida {
 }
 
 export interface DividaRequest {
-  pessoaId: number;
+  pessoaId?: number;
   descricao: string;
   tipo: TipoDivida;
   valorTotal: number;
@@ -54,6 +57,14 @@ export interface PagarParcelaRequest {
   categoriaId?: number; 
   dataPagamento?: string; 
   valorPago?: number; 
+}
+
+export interface PagarMultiplasParcelasRequest {
+  parcelaIds: number[];
+  contaId: number;
+  categoriaId?: number;
+  dataPagamento?: string;
+  desconto?: number;
 }
 
 export interface DividasResumo {

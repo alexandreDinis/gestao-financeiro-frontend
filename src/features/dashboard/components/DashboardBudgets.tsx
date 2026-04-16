@@ -90,7 +90,7 @@ export function DashboardBudgets({ orcamentos, loading }: Props) {
                    <Progress 
                     value={Math.min(orcamento.percentualUtilizado, 100)} 
                     className="h-2 bg-white/5"
-                    indicatorClassName={progressColor}
+                    indicatorColor={progressColor}
                    />
                    <div className="flex justify-between mt-1">
                       <span className={`text-[10px] font-bold ${isOverLimit ? 'text-red-400' : isNearLimit ? 'text-yellow-400' : 'text-primary-foreground/70'}`}>

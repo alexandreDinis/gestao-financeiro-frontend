@@ -5,7 +5,8 @@ import { useAuth } from "./use-auth";
 import type { 
   ApiResponse, 
   TransacaoResponse, 
-  TransacaoRequest
+  TransacaoRequest,
+  LancamentoResponse
 } from "@/types";
 
 /**
@@ -37,15 +38,25 @@ export function useTransacoes(filters: TransacoesFilters) {
   return useQuery({
     queryKey: ["transacoes", tenantId, filters],
     queryFn: async () => {
-      // Convert filters to URLSearchParams format, stripping out undefined/ignores
+      // Convert mes/ano to dataInicio/dataFim (backend expects ISO date params)
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      const { mes, ano, ...rest } = filters;
+
+      if (mes && ano) {
+        const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+        const lastDay = new Date(ano, mes, 0).getDate();
+        const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${lastDay}`;
+        params.append('dataInicio', dataInicio);
+        params.append('dataFim', dataFim);
+      }
+
+      Object.entries(rest).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
           params.append(key, value.toString());
         }
       });
 
-      const { data } = await api.get<ApiResponse<TransacaoResponse[]>>(`/transacoes?${params.toString()}`);
+      const { data } = await api.get<ApiResponse<LancamentoResponse[]>>(`/transacoes?${params.toString()}`);
       return data;
     },
     // Don't fetch until we have a user (tenant initialized)
@@ -129,8 +140,8 @@ export function usePagarTransacao() {
           if (!oldQueryData) return oldQueryData;
           return {
             ...oldQueryData,
-            data: oldQueryData.data.map((t: TransacaoResponse) => 
-               t.id === transacaoId ? { ...t, status: "PAGO", dataPagamento: new Date().toISOString() } : t
+            data: oldQueryData.data.map((t: LancamentoResponse) => 
+               t.id === transacaoId ? { ...t, status: "PAGO" } : t
             )
           };
         }
@@ -175,7 +186,7 @@ export function useCancelarTransacao() {
           if (!oldQueryData) return oldQueryData;
           return {
             ...oldQueryData,
-            data: oldQueryData.data.map((t: TransacaoResponse) => 
+            data: oldQueryData.data.map((t: LancamentoResponse) => 
                t.id === transacaoId ? { ...t, status: "CANCELADO" } : t
             )
           };
