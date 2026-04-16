@@ -60,7 +60,7 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
   });
 
   const { register, handleSubmit, control, reset, setValue, watch, formState: { errors } } = useForm<PagarFormValues>({
-    resolver: zodResolver(pagarSchema),
+    resolver: zodResolver(pagarSchema) as any,
     defaultValues: {
       dataPagamento: new Date().toISOString().split("T")[0],
     }
@@ -163,7 +163,7 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
               render={({ field }) => (
                 <Select 
                   key={`select-conta-${contas?.length || 0}-${field.value}`}
-                  onValueChange={(val) => field.onChange(Number(val))} 
+                  onValueChange={(val) => field.onChange(val ? Number(val) : null)} 
                   value={field.value?.toString() || ""}
                 >
                   <SelectTrigger className={`bg-black/40 border-border/50 ${errors.contaId ? 'border-red-500/50' : ''}`}>

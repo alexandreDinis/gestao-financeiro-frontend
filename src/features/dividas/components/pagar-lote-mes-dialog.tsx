@@ -397,7 +397,7 @@ export function PagarLoteMesDialog({ open, onOpenChange, dividas, tipo, mes, ano
                 render={({ field }) => (
                   <Select 
                     key={`select-conta-mes-${contas?.length || 0}-${field.value}`}
-                    onValueChange={(val) => field.onChange(Number(val))} 
+                    onValueChange={(val) => field.onChange(val ? Number(val) : null)} 
                     value={field.value?.toString() || ""}
                   >
                     <SelectTrigger className="bg-black/40 border-border/50 h-9 text-xs">

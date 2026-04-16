@@ -70,7 +70,7 @@ export function PagarLoteDialog({ open, onOpenChange, divida, tipo }: PagarLoteD
   });
 
   const { register, handleSubmit, control, reset, setValue, watch, formState: { errors } } = useForm<PagarLoteFormValues>({
-    resolver: zodResolver(pagarLoteSchema),
+    resolver: zodResolver(pagarLoteSchema) as any,
     defaultValues: {
       dataPagamento: new Date().toISOString().split("T")[0],
       desconto: 0,
@@ -326,7 +326,7 @@ export function PagarLoteDialog({ open, onOpenChange, divida, tipo }: PagarLoteD
                 render={({ field }) => (
                   <Select 
                     key={`select-conta-lote-${contas?.length || 0}-${field.value}`}
-                    onValueChange={(val) => field.onChange(Number(val))} 
+                    onValueChange={(val) => field.onChange(val ? Number(val) : null)} 
                     value={field.value?.toString() || ""}
                   >
                     <SelectTrigger className={`bg-black/40 border-border/50 h-9 text-xs ${errors.contaId ? 'border-red-500/50' : ''}`}>

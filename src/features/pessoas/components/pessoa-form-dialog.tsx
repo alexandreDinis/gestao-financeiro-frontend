@@ -48,7 +48,7 @@ export function PessoaFormDialog({ open, onOpenChange, pessoaParams, onSuccessCa
   const isPending = criarMutation.isPending || atualizarMutation.isPending;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       nome: "",
       telefone: "",

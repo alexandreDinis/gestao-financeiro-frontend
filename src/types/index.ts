@@ -10,6 +10,7 @@ export interface ApiError {
   code: string;
   message: string;
   field?: string;
+  details?: Record<string, any>;
 }
 
 export interface ApiResponse<T> {
@@ -67,16 +68,19 @@ export enum DirecaoLancamento {
   CREDITO = "CREDITO",
 }
 
-export enum OrigemVencimento {
+export enum OrigemLancamento {
   TRANSACAO = "TRANSACAO",
   PARCELA = "PARCELA",
+  AJUSTE = "AJUSTE",
+  ESTORNO = "ESTORNO",
+  JUROS = "JUROS",
 }
 
 export enum TipoMovimentacao {
   RECEITA = "RECEITA",
   DESPESA = "DESPESA",
 }
- 
+
 export type TipoDespesa = "FIXA" | "VARIAVEL";
 export type TipoRecorrencia = "FIXA" | "VARIAVEL";
 export type StatusRecorrencia = "ATIVA" | "PAUSADA" | "ENCERRADA";
@@ -95,13 +99,30 @@ export interface Recorrencia {
   createdAt: string;
 }
 
-export interface LancamentoResponse {
+export interface LancamentoLegResponse {
   id: number;
   contaId: number;
   contaNome: string;
   valor: number;
   direcao: DirecaoLancamento;
   descricao: string;
+}
+
+export interface LancamentoResponse {
+  id: number;
+  descricao: string;
+  valor: number;
+  dataReferencia: string;
+  tipo: TipoTransacao;
+  numeroParcela?: number;
+  totalParcelas?: number;
+  origem: OrigemLancamento;
+  categoria?: string;
+  conta?: string;
+  status: StatusTransacao;
+  transacaoId: number;
+  geradoAutomaticamente?: boolean;
+  tipoDespesa?: TipoDespesa;
 }
 
 export interface TransacaoResponse {
@@ -116,7 +137,7 @@ export interface TransacaoResponse {
   status: StatusTransacao;
   observacao?: string;
   categoria?: Categoria;
-  lancamentos: LancamentoResponse[];
+  lancamentos: LancamentoLegResponse[];
   createdAt: string;
   geradoAutomaticamente: boolean;
   recorrenciaId?: number;
@@ -248,7 +269,7 @@ export interface Vencimento {
   dataVencimento: string;
   diasRestantes: number;
   conta: string;
-  origem: OrigemVencimento;
+  origem: OrigemLancamento;
   tipo: TipoMovimentacao;
   atrasado: boolean;
   venceHoje: boolean;

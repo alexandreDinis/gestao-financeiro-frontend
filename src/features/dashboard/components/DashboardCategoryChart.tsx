@@ -72,7 +72,7 @@ export function DashboardCategoryChart({ data, loading }: Props) {
                 borderRadius: '12px',
                 color: '#fff'
               }}
-              formatter={(value: number) => [formatCurrency(value), '']}
+              formatter={(value: any) => [formatCurrency(Number(value || 0)), '']}
             />
             <Legend 
                 layout="vertical" 

@@ -85,7 +85,7 @@ export function DashboardFlowChart({ data, loading }: Props) {
                 color: '#fff'
               }}
               itemStyle={{ fontSize: '12px' }}
-              formatter={(value: number) => [formatCurrency(value), '']}
+              formatter={(value: any) => [formatCurrency(Number(value || 0)), '']}
             />
             <Legend verticalAlign="top" height={36}/>
             <Area 

@@ -141,9 +141,10 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
     control,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TransacaoFormValues>({
-    resolver: zodResolver(transacaoSchema),
+    resolver: zodResolver(transacaoSchema) as any,
     defaultValues: initialData ? {
       descricao: initialData.descricao,
       valor: initialData.valor,
@@ -157,7 +158,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       contaDestinoId: initialData.contaDestino?.id || null,
       observacao: initialData.observacao || null,
       dataFim: initialData.dataFim || null,
-      parcelas: initialData.parcelas || null,
+      parcelas: initialData.parcelas || 1,
       isParcelado: initialData.isParcelado || false,
       numParcelas: initialData.numParcelas || null,
       pessoaId: initialData.pessoa?.id || null,
@@ -176,7 +177,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       isRecorrente: false,
       periodicidade: null,
       dataFim: null,
-      parcelas: null,
+      parcelas: 1,
       isParcelado: false,
       numParcelas: null,
       pessoaId: null,
@@ -269,7 +270,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
            categoriaId: data.categoriaId!,
            descricao: data.descricao,
            valor: data.valor,
-           parcelas: data.parcelas || undefined,
+           parcelas: data.parcelas || 1,
            data: data.data,
         });
       } else if (data.isParcelado && data.numParcelas && data.numParcelas >= 2) {
@@ -786,7 +787,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                   name="periodicidade"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <Select onValueChange={(val) => field.onChange(val)} value={field.value || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a frequência">
                           {field.value === "DIARIA" ? "Diariamente" :
@@ -844,7 +845,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                   decimalScale={0}
                   onValueChange={(values) => {
                     const val = values.floatValue || 1;
-                    reset({ ...watch(), parcelas: val });
+                    setValue("parcelas", val);
                   }}
                   customInput={Input}
                   className="bg-transparent"
@@ -909,7 +910,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                     control={control}
                     render={({ field }) => (
                       <Select 
-                        onValueChange={(val) => field.onChange(parseInt(val))} 
+                        onValueChange={(val) => field.onChange(val ? parseInt(val) : null)} 
                         value={field.value?.toString() || ""}
                       >
                         <SelectTrigger className="bg-transparent">

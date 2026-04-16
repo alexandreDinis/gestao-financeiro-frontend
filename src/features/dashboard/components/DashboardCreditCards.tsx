@@ -75,7 +75,7 @@ export function DashboardCreditCards({ cartoes, loading }: Props) {
                    <Progress 
                       value={Math.min(cartao.percentualUtilizado, 100)} 
                       className="h-1.5 bg-black/40"
-                      indicatorClassName={isHighUsage ? 'bg-yellow-500' : 'bg-primary'}
+                      indicatorColor={isHighUsage ? 'bg-yellow-500' : 'bg-primary'}
                    />
                 </div>
 
