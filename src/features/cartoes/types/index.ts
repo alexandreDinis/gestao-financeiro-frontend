@@ -17,6 +17,9 @@ export interface FaturaCartao {
   mesReferencia: number;
   anoReferencia: number;
   valorTotal: number;
+  totalRecorrente: number;
+  totalParcelado: number;
+  totalUnico: number;
   dataVencimento: string;
   status: StatusFatura;
   parcelas: Parcela[];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   AreaChart, 
@@ -19,6 +20,12 @@ interface Props {
 }
 
 export function DashboardFlowChart({ data, loading }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -27,7 +34,7 @@ export function DashboardFlowChart({ data, loading }: Props) {
     }).format(value);
   };
 
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <Card className="glass-panel h-[400px]">
         <CardHeader>

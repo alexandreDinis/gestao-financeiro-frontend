@@ -12,6 +12,7 @@ import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mu
 import { useCriarDividaMutation } from "@/features/dividas/hooks/use-dividas-mutation";
 import { DividaRequest } from "@/features/dividas/types";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
+import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
 import { format, addMonths } from "date-fns";
 
 import { TipoTransacao, TipoConta, Conta, Categoria, ApiResponse } from "@/types";
@@ -60,6 +61,7 @@ const transacaoSchema = z.object({
   isRecorrente: z.boolean().optional(),
   periodicidade: z.enum(["DIARIA", "SEMANAL", "QUINZENAL", "MENSAL", "ANUAL"]).optional().nullable(),
   dataFim: z.string().optional().nullable(),
+  valorVariavel: z.boolean().optional(),
   
   // Credit Card fields
   parcelas: z.number().min(1).optional().nullable(),
@@ -146,22 +148,25 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   } = useForm<TransacaoFormValues>({
     resolver: zodResolver(transacaoSchema) as any,
     defaultValues: initialData ? {
-      descricao: initialData.descricao,
-      valor: initialData.valor,
-      tipo: initialData.tipo as TipoTransacao,
-      data: initialData.dataInicio || new Date().toISOString().split("T")[0],
+      descricao: initialData.descricao || "",
+      valor: initialData.valor || 0,
+      tipo: (initialData.tipo === TipoTransacao.RECEITA || initialData.tipo === "RECEITA" ? TipoTransacao.RECEITA : 
+             initialData.tipo === TipoTransacao.TRANSFERENCIA || initialData.tipo === "TRANSFERENCIA" ? TipoTransacao.TRANSFERENCIA : 
+             TipoTransacao.DESPESA) as TipoTransacao,
+      data: initialData.data || initialData.dataInicio || new Date().toISOString().split("T")[0],
       dataVencimento: initialData.dataVencimento || null,
-      isRecorrente: true,
-      periodicidade: initialData.periodicidade,
-      categoriaId: initialData.categoria?.id || null,
-      contaOrigemId: initialData.conta?.id,
-      contaDestinoId: initialData.contaDestino?.id || null,
+      isRecorrente: initialData.isRecorrente || !!initialData.recorrenciaId || false,
+      periodicidade: initialData.periodicidade || null,
+      categoriaId: initialData.categoriaId || initialData.categoria?.id || null,
+      contaOrigemId: initialData.contaId || initialData.conta?.id || null,
+      contaDestinoId: initialData.contaDestinoId || initialData.contaDestino?.id || null,
       observacao: initialData.observacao || null,
       dataFim: initialData.dataFim || null,
+      valorVariavel: initialData.valorVariavel || false,
       parcelas: initialData.parcelas || 1,
       isParcelado: initialData.isParcelado || false,
       numParcelas: initialData.numParcelas || null,
-      pessoaId: initialData.pessoa?.id || null,
+      pessoaId: initialData.pessoaId || initialData.pessoa?.id || null,
       isPago: initialData.status === "PAGO",
     } : {
       tipo: TipoTransacao.DESPESA,
@@ -177,6 +182,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       isRecorrente: false,
       periodicidade: null,
       dataFim: null,
+      valorVariavel: false,
       parcelas: 1,
       isParcelado: false,
       numParcelas: null,
@@ -203,6 +209,11 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   const [manualParcelas, setManualParcelas] = useState<{ id: number, valor: number, vencimento: string }[]>([]);
   const [somaParcelas, setSomaParcelas] = useState(0);
 
+  const [inlinePessoaOpen, setInlinePessoaOpen] = useState(false);
+  const onPessoaCriada = (novaPessoaId?: number) => {
+    if (novaPessoaId) setValue("pessoaId", novaPessoaId);
+  };
+
   const tipoSelecionado = watch("tipo");
   const contaOrigemSelecionada = watch("contaOrigemId");
   const watchValor = watch("valor");
@@ -214,6 +225,26 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   const isTransferencia = tipoSelecionado === TipoTransacao.TRANSFERENCIA;
   const isDespesa = tipoSelecionado === TipoTransacao.DESPESA;
   const isCartao = cartoes.some(c => c.contaId === contaOrigemSelecionada);
+
+  // Unified "Modalidade" logic
+  const modalidade = isRecorrente ? "RECORRENTE" : isParcelado ? "PARCELADO" : "UNICO";
+
+  const setModalidade = (val: "UNICO" | "RECORRENTE" | "PARCELADO") => {
+    if (val === "RECORRENTE") {
+      setValue("isRecorrente", true);
+      setValue("isParcelado", false);
+      setValue("tipoDespesa", "FIXA");
+      if (!watch("periodicidade")) setValue("periodicidade", "MENSAL");
+    } else if (val === "PARCELADO") {
+      setValue("isRecorrente", false);
+      setValue("isParcelado", true);
+      setValue("tipoDespesa", "VARIAVEL");
+    } else {
+      setValue("isRecorrente", false);
+      setValue("isParcelado", false);
+      setValue("tipoDespesa", "VARIAVEL");
+    }
+  };
 
   // Calculate installments preview
   useEffect(() => {
@@ -257,6 +288,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
           diaVencimento: data.periodicidade === "MENSAL" || data.periodicidade === "ANUAL" ? diaDoMes : undefined,
           categoriaId: isTransferencia ? undefined : (data.categoriaId || undefined),
           contaId: data.contaOrigemId,
+          valorVariavel: data.valorVariavel,
         };
 
         if (initialData?.id) {
@@ -308,6 +340,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   if (!isMounted) return null;
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-4">
       
       {/* Type Selector */}
@@ -352,7 +385,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="valor">Valor (R$)</Label>
+          <Label htmlFor="valor">
+            {watch("isRecorrente") && watch("valorVariavel") ? "Valor Estimado (R$)" : "Valor (R$)"}
+          </Label>
           <Controller
             name="valor"
             control={control}
@@ -377,6 +412,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                />
             )}
           />
+          {watch("isRecorrente") && watch("valorVariavel") && (
+            <p className="text-xs text-muted-foreground mt-1">Você poderá ajustar o valor real todo mês antes de pagar.</p>
+          )}
           {errors.valor && <p className="text-red-400 text-xs mt-1">{errors.valor.message}</p>}
         </div>
       </div>
@@ -646,13 +684,13 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                       </div>
                       <div className="max-h-[300px] overflow-y-auto p-1 scrollbar-thin">
                         {categorias
-                          .filter(c => c.tipo.toString() === tipoSelecionado.toString())
+                          .filter(c => (c.tipo as string) === (tipoSelecionado as string))
                           .filter(c => c.nome.toLowerCase().includes(searchCategoria.toLowerCase()))
                           .length === 0 && (
                           <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma categoria encontrada.</div>
                         )}
                         {categorias
-                          .filter(c => c.tipo.toString() === tipoSelecionado.toString())
+                          .filter(c => (c.tipo as string) === (tipoSelecionado as string))
                           .filter(c => c.nome.toLowerCase().includes(searchCategoria.toLowerCase()))
                           .map((c) => (
                             <button
@@ -686,38 +724,32 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
           {errors.categoriaId && !isTransferencia && <p className="text-red-400 text-xs mt-1">{errors.categoriaId.message}</p>}
         </div>
 
-        {/* Behavior Selector */}
-        {isDespesa && !isRecorrente && (
+        {/* Modalidade / Agendamento */}
+        {!isTransferencia && (
           <div className="space-y-2 md:col-span-2">
-            <Label>Comportamento do Gasto</Label>
-            <Controller
-              name="tipoDespesa"
-              control={control}
-              render={({ field }) => (
-                <div className="flex gap-3 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => field.onChange('FIXA')}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded border transition-colors",
-                      field.value === 'FIXA' ? "bg-primary/20 border-primary text-primary-foreground" : "bg-background border-input hover:bg-accent"
-                    )}
-                  >
-                    <span className="font-medium text-sm">Fixa (Ex: Luz, Aluguel)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => field.onChange('VARIAVEL')}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded border transition-colors",
-                      field.value === 'VARIAVEL' ? "bg-primary/20 border-primary text-primary-foreground" : "bg-background border-input hover:bg-accent"
-                    )}
-                  >
-                    <span className="font-medium text-sm">Variável (Ex: Lanche, Roupa)</span>
-                  </button>
-                </div>
-              )}
-            />
+            <Label>Modalidade do Lançamento</Label>
+            <div className="grid grid-cols-3 gap-3 mt-1">
+              {[
+                { id: "UNICO", label: "Lançamento Único", icon: Check },
+                { id: "RECORRENTE", label: "Fixo / Assinatura", icon: Repeat },
+                { id: "PARCELADO", label: "Parcelado", icon: CalendarIcon },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setModalidade(m.id as any)}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-2 p-3 rounded-lg border transition-all h-20",
+                    modalidade === m.id 
+                      ? "bg-primary/20 border-primary text-white" 
+                      : "bg-black/30 border-border/40 hover:bg-white/5 text-muted-foreground"
+                  )}
+                >
+                  <m.icon size={18} className={modalidade === m.id ? "text-primary" : ""} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider">{m.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -758,28 +790,14 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
         )}
       </div>
 
-      {/* Recurrence Checkbox */}
-      {!isTransferencia && (
-        <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-4">
-          <div className="flex items-center space-x-2">
-            <Controller
-              name="isRecorrente"
-              control={control}
-              render={({ field }) => (
-                <Checkbox 
-                  id="isRecorrente" 
-                  checked={field.value} 
-                  onCheckedChange={field.onChange} 
-                />
-              )}
-            />
-            <Label htmlFor="isRecorrente" className="cursor-pointer text-sm font-medium flex items-center gap-2">
-              <Repeat size={16} className="text-primary" />
-              Tornar este lançamento recorrente
-            </Label>
+      {/* Recurrence Details */}
+      {isRecorrente && (
+        <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 text-primary">
+            <Repeat size={18} />
+            <span className="text-sm font-semibold uppercase tracking-wider">Configuração de Recorrência</span>
           </div>
 
-          {isRecorrente && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-primary/10">
               <div className="space-y-2 relative">
                 <Label>Periodicidade</Label>
@@ -823,7 +841,23 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                 </div>
               </div>
             </div>
-          )}
+
+            <div className="flex items-center space-x-2 pt-2 border-t border-primary/10">
+              <Controller
+                name="valorVariavel"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox 
+                    id="valorVariavel" 
+                    checked={field.value} 
+                    onCheckedChange={field.onChange} 
+                  />
+                )}
+              />
+              <Label htmlFor="valorVariavel" className="cursor-pointer text-sm font-medium">
+                Valor variável? (Ex: Conta de água, luz)
+              </Label>
+            </div>
         </div>
       )}
 
@@ -867,24 +901,11 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       )}
 
       {/* Manual Installments row */}
-      {!isCartao && !isRecorrente && isDespesa && (
-        <div className="p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-4">
-          <div className="flex items-center space-x-2">
-             <Controller
-               name="isParcelado"
-               control={control}
-               render={({ field }) => (
-                 <Checkbox 
-                   id="isParcelado" 
-                   checked={field.value} 
-                   onCheckedChange={field.onChange} 
-                 />
-               )}
-             />
-             <Label htmlFor="isParcelado" className="cursor-pointer text-sm font-medium flex items-center gap-2">
-               <CalendarIcon size={16} className="text-purple-400" />
-               Parcelar este lançamento (Carnê/Promissória)
-             </Label>
+      {isParcelado && !isCartao && (
+        <div className="p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 text-purple-400">
+            <CalendarIcon size={18} />
+            <span className="text-sm font-semibold uppercase tracking-wider">Configuração de Parcelamento</span>
           </div>
 
           {isParcelado && (
@@ -910,15 +931,24 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                     control={control}
                     render={({ field }) => (
                       <Select 
-                        onValueChange={(val) => field.onChange(val ? parseInt(val) : null)} 
+                        onValueChange={(val) => {
+                          if (val === "new") {
+                            setInlinePessoaOpen(true);
+                          } else {
+                            field.onChange(val ? parseInt(val) : null);
+                          }
+                        }} 
                         value={field.value?.toString() || ""}
                       >
                         <SelectTrigger className="bg-transparent">
                           <SelectValue placeholder="Selecione o credor" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-[300px]">
+                          <SelectItem value="new" className="text-primary font-bold focus:bg-primary/20 focus:text-primary cursor-pointer">
+                            + Cadastrar Nova Pessoa
+                          </SelectItem>
                           {pessoas.map((p) => (
-                            <SelectItem key={p.id} value={p.id.toString()}>{p.nome}</SelectItem>
+                            <SelectItem key={p.id} value={p.id?.toString() || ""}>{p.nome}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -986,5 +1016,12 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       </div>
 
     </form>
+    
+    <PessoaFormDialog 
+        open={inlinePessoaOpen} 
+        onOpenChange={setInlinePessoaOpen} 
+        onSuccessCallback={onPessoaCriada} 
+      />
+    </>
   );
 }
