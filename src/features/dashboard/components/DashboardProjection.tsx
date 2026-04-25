@@ -55,19 +55,21 @@ export function DashboardProjection({ projecao, loading }: Props) {
           </div>
 
           <div className="p-3 rounded-lg bg-black/20 border border-white/5 flex flex-col justify-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Receitas Projetadas</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">A Receber (Restante)</p>
             <div className="flex items-center gap-2 mt-1">
                 <TrendingUp size={16} className="text-green-500" />
-                <p className="text-xl font-bold text-green-400">{formatCurrency(projecao.receitasProjetadas)}</p>
+                <p className="text-xl font-bold text-green-400">{formatCurrency(projecao.receitasPendentes)}</p>
             </div>
+            <p className="text-[9px] text-muted-foreground mt-1">Total projetado: {formatCurrency(projecao.receitasProjetadas)}</p>
           </div>
-
+ 
           <div className="p-3 rounded-lg bg-black/20 border border-white/5 flex flex-col justify-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Despesas Projetadas</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">A Pagar (Restante)</p>
              <div className="flex items-center gap-2 mt-1">
                 <TrendingDown size={16} className="text-red-500" />
-                <p className="text-xl font-bold text-red-400">{formatCurrency(projecao.despesasProjetadas)}</p>
+                <p className="text-xl font-bold text-red-400">{formatCurrency(projecao.despesasPendentes)}</p>
             </div>
+            <p className="text-[9px] text-muted-foreground mt-1">Total projetado: {formatCurrency(projecao.despesasProjetadas)}</p>
           </div>
 
           <div className="p-3 rounded-lg bg-black/20 border border-white/5 flex flex-col justify-center">

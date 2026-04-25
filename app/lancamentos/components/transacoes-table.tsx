@@ -163,11 +163,6 @@ export function TransacoesTable({ filters }: { filters: any }) {
             }
           />
           <DropdownMenuContent align="end" className="glass-panel border-border/40 w-[160px]">
-            {canEdit(user) && t.origem === OrigemLancamento.TRANSACAO && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
-              <DropdownMenuItem onClick={() => handlePagar(t.transacaoId)} className="text-green-400 cursor-pointer focus:bg-green-500/10 focus:text-green-400">
-                <CheckCircle size={14} className="mr-2" /> Pagar
-              </DropdownMenuItem>
-            )}
             {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
               <DropdownMenuItem onClick={() => handleCancelar(t.transacaoId)} className="text-yellow-400 cursor-pointer focus:bg-yellow-500/10 focus:text-yellow-400">
                 <XCircle size={14} className="mr-2" /> Cancelar
@@ -245,11 +240,6 @@ export function TransacoesTable({ filters }: { filters: any }) {
               }
             />
             <DropdownMenuContent align="end" className="glass-panel border-border/40">
-              {canEdit(user) && (t.status === StatusTransacao.PENDENTE || t.status === StatusTransacao.ATRASADO) && (
-                <DropdownMenuItem onClick={() => handlePagar(t.id)} className="text-green-400 cursor-pointer">
-                  <CheckCircle size={14} className="mr-2" /> Pagar
-                </DropdownMenuItem>
-              )}
               {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
                 <DropdownMenuItem onClick={() => handleCancelar(t.id)} className="text-yellow-400 cursor-pointer">
                   <XCircle size={14} className="mr-2" /> Cancelar

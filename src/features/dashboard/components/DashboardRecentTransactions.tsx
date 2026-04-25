@@ -2,8 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowUpRight, ArrowDownRight, Calendar, Clock } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Calendar, Clock, CheckCircle, ExternalLink } from "lucide-react";
 import { UltimaTransacao, Vencimento } from "@/types";
+import Link from "next/link";
 
 interface Props {
   recentes: UltimaTransacao[];
@@ -87,12 +88,47 @@ export function DashboardRecentTransactions({ recentes, proximos, loading }: Pro
                   </div>
                 </div>
               </div>
-              <div className={`text-sm font-bold ml-2 shrink-0 ${tipo === 'RECEITA' ? 'text-green-400' : 'text-white'}`}>
-                {tipo === 'RECEITA' ? '+' : ''}{formatCurrency(tx.valor)}
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <div className={`text-sm font-bold ${tipo === 'RECEITA' ? 'text-green-400' : 'text-white'}`}>
+                  {tipo === 'RECEITA' ? '+' : ''}{formatCurrency(tx.valor)}
+                </div>
+                
+                {tx.valorPrevisto !== undefined && tx.valorPrevisto !== null && (
+                  <div className="text-[10px] text-right mt-0.5">
+                    {tx.valor === tx.valorPrevisto && (!('status' in tx) || tx.status === 'PENDENTE') ? (
+                      <span className="text-orange-400 flex items-center gap-1 bg-orange-400/10 px-1.5 py-0.5 rounded">
+                        ⚠️ Confirme o valor
+                      </span>
+                    ) : tx.valor > tx.valorPrevisto ? (
+                      <span className="text-red-400 flex items-center gap-0.5">
+                        <ArrowUpRight size={10} /> +{formatCurrency(tx.valor - tx.valorPrevisto)} acima do esperado
+                      </span>
+                    ) : tx.valor < tx.valorPrevisto ? (
+                      <span className="text-green-400 flex items-center gap-0.5">
+                        <ArrowDownRight size={10} /> -{formatCurrency(tx.valorPrevisto - tx.valor)} abaixo do esperado
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <CheckCircle size={10} /> No valor esperado
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
+
+        {/* Link para Contas a Pagar ao final dos vencimentos */}
+        {isVencimento && transactions.length > 0 && (
+          <Link
+            href="/contas"
+            className="flex items-center justify-center gap-2 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-300 text-primary text-xs font-medium mt-2"
+          >
+            <ExternalLink size={14} />
+            Ir para Contas a Pagar & Receber
+          </Link>
+        )}
       </div>
     );
   };
