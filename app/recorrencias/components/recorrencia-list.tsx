@@ -87,12 +87,15 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${rec.tipo === 'FIXA' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-orange-500/10 text-orange-400 border-orange-500/30'}`}>
-                  {rec.tipo === 'FIXA' ? 'Valor Fixo' : 'Variavel'}
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${rec.valorVariavel ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+                  {rec.valorVariavel ? 'Estimativa' : 'Valor Fixo'}
                 </span>
               </TableCell>
               <TableCell className="text-white font-semibold">
-                 {formatCurrency(rec.valor)}
+                 <div className="flex flex-col">
+                   <span>{formatCurrency(rec.valor)}</span>
+                   {rec.valorVariavel && <span className="text-[10px] text-muted-foreground font-normal -mt-0.5">Valor esperado</span>}
+                 </div>
               </TableCell>
               <TableCell>
                 <Badge className={`text-[10px] px-2 py-0 font-medium border ${statusColors[rec.status || "ativa"] || "bg-muted text-muted-foreground"}`}>

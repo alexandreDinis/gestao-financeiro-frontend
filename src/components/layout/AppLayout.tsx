@@ -24,13 +24,14 @@ import { useAuth } from "@/hooks/use-auth";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Contas", href: "/contas", icon: Wallet },
-  { name: "Categorias", href: "/categorias", icon: Tags },
-  { name: "Lançamentos", href: "/lancamentos", icon: ArrowLeftRight },
-  { name: "Recorrências", href: "/recorrencias", icon: Clock },
+  { name: "Transações", href: "/lancamentos", icon: ArrowLeftRight },
+  { name: "Contas a Pagar", href: "/contas", icon: Clock },
+  { name: "Bancos & Saldos", href: "/bancos", icon: Wallet },
+  { name: "Assinaturas & Fixas", href: "/recorrencias", icon: RefreshCcw },
   { name: "Cartões", href: "/cartoes", icon: CreditCard },
-  { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
   { name: "Orçamentos", href: "/orcamentos", icon: Target },
+  { name: "Categorias", href: "/categorias", icon: Tags },
+  { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 

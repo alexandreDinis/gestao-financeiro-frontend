@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   PieChart, 
@@ -17,6 +18,12 @@ interface Props {
 }
 
 export function DashboardCategoryChart({ data, loading }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -26,7 +33,7 @@ export function DashboardCategoryChart({ data, loading }: Props) {
 
   const COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#ec4899', '#f97316', '#06b6d4'];
 
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <Card className="glass-panel h-[400px]">
         <CardHeader>

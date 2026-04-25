@@ -74,6 +74,7 @@ export enum OrigemLancamento {
   AJUSTE = "AJUSTE",
   ESTORNO = "ESTORNO",
   JUROS = "JUROS",
+  FATURA = "FATURA",
 }
 
 export enum TipoMovimentacao {
@@ -96,6 +97,7 @@ export interface Recorrencia {
   dataFim?: string | null;
   categoria?: Categoria;
   conta?: Conta;
+  valorVariavel?: boolean;
   createdAt: string;
 }
 
@@ -123,6 +125,7 @@ export interface LancamentoResponse {
   transacaoId: number;
   geradoAutomaticamente?: boolean;
   tipoDespesa?: TipoDespesa;
+  valorPrevisto?: number;
 }
 
 export interface TransacaoResponse {
@@ -142,6 +145,7 @@ export interface TransacaoResponse {
   geradoAutomaticamente: boolean;
   recorrenciaId?: number;
   referencia?: string; // YYYY-MM
+  valorPrevisto?: number;
 }
 
 export interface TransacaoRequest {
@@ -156,6 +160,7 @@ export interface TransacaoRequest {
   contaDestinoId?: number | null; // Used only for transfers
   observacao?: string;
   idempotencyKey?: string;
+  valorPrevisto?: number;
 }
 
 // ===== Conta (Account) =====
@@ -231,6 +236,8 @@ export interface ProjecaoMes {
   receitasProjetadas: number;
   despesasProjetadas: number;
   saldoProjetado: number;
+  receitasPendentes: number;
+  despesasPendentes: number;
 }
 
 export interface GastoPorCategoria {
@@ -258,6 +265,7 @@ export interface UltimaTransacao {
   data: string;
   categoria: string;
   conta: string;
+  valorPrevisto?: number;
 }
 
 export interface Vencimento {
@@ -273,6 +281,7 @@ export interface Vencimento {
   tipo: TipoMovimentacao;
   atrasado: boolean;
   venceHoje: boolean;
+  valorPrevisto?: number;
 }
 
 export interface ProximosVencimentosDashboard {
