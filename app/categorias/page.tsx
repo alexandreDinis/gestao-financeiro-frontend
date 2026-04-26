@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { toast } from "sonner";
+import { CategoriaFormDialog } from "./components/categoria-form-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,19 +56,12 @@ import {
   TIPO_CATEGORIA_LABELS,
 } from "@/types";
 
-const EMPTY_FORM: CategoriaRequest = {
-  nome: "",
-  tipo: TipoCategoria.DESPESA,
-  cor: "",
-  icone: "",
-  categoriaPaiId: null,
-};
+
 
 export default function CategoriasPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<CategoriaRequest>({ ...EMPTY_FORM });
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [tipoFilter, setTipoFilter] = useState<string>("ALL");
 
@@ -91,26 +85,7 @@ export default function CategoriasPage() {
   });
 
   // ===== Mutations =====
-  const createMutation = useMutation({
-    mutationFn: (req: CategoriaRequest) => api.post("/categorias", req),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categorias"] });
-      toast.success("Categoria criada com sucesso!");
-      closeDialog();
-    },
-    onError: () => toast.error("Erro ao criar categoria."),
-  });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, req }: { id: number; req: CategoriaRequest }) =>
-      api.put(`/categorias/${id}`, req),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categorias"] });
-      toast.success("Categoria atualizada com sucesso!");
-      closeDialog();
-    },
-    onError: () => toast.error("Erro ao atualizar categoria."),
-  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/categorias/${id}`),
@@ -125,47 +100,20 @@ export default function CategoriasPage() {
   // ===== Handlers =====
   const openCreate = () => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM });
     setDialogOpen(true);
   };
 
   const openEdit = (cat: Categoria) => {
     setEditingId(cat.id);
-    setForm({
-      nome: cat.nome,
-      tipo: cat.tipo,
-      cor: cat.cor || "",
-      icone: cat.icone || "",
-      categoriaPaiId: cat.categoriaPaiId,
-    });
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingId(null);
-    setForm({ ...EMPTY_FORM });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const payload = {
-      ...form,
-      categoriaPaiId: form.categoriaPaiId || null,
-    };
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, req: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  // Parent categories for select (exclude current editing category)
-  const parentOptions = (allCategorias || []).filter(
-    (c) => c.id !== editingId && c.categoriaPaiId === null
-  );
 
   return (
     <AppLayout>
@@ -319,125 +267,28 @@ export default function CategoriasPage() {
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass-panel border-border/40 sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="text-white text-lg">
-              {editingId ? "Editar Categoria" : "Nova Categoria"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingId
-                ? "Altere os dados da categoria abaixo."
-                : "Preencha os dados para criar uma nova categoria."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label htmlFor="cat-nome">Nome</Label>
-              <Input
-                id="cat-nome"
-                placeholder="Ex: Alimentação, Salário, Transporte"
-                value={form.nome}
-                onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                className="bg-black/40 border-border/50 focus:border-primary/50"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cat-tipo">Tipo</Label>
-              <Select
-                value={form.tipo}
-                onValueChange={(val) => setForm({ ...form, tipo: (val as TipoCategoria) || TipoCategoria.DESPESA })}
-              >
-                <SelectTrigger id="cat-tipo" className="bg-black/40 border-border/50">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent className="glass-panel border-border/40">
-                  <SelectItem value="RECEITA">
-                    <span className="flex items-center gap-2">
-                      <ArrowUpRight size={16} className="text-green-400" />
-                      Receita
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="DESPESA">
-                    <span className="flex items-center gap-2">
-                      <ArrowDownRight size={16} className="text-red-400" />
-                      Despesa
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cat-pai">Categoria Pai (opcional)</Label>
-              <Select
-                value={form.categoriaPaiId?.toString() || "NONE"}
-                onValueChange={(val) =>
-                  setForm({ ...form, categoriaPaiId: (!val || val === "NONE") ? null : Number(val) })
-                }
-              >
-                <SelectTrigger id="cat-pai" className="bg-black/40 border-border/50">
-                  <SelectValue placeholder="Nenhuma (raiz)" />
-                </SelectTrigger>
-                <SelectContent className="glass-panel border-border/40">
-                  <SelectItem value="NONE">Nenhuma (raiz)</SelectItem>
-                  {parentOptions.map((parent) => (
-                    <SelectItem key={parent.id} value={parent.id.toString()}>
-                      <span className="flex items-center gap-2">
-                        <FolderTree size={14} className="text-primary/60" />
-                        {parent.nome}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cat-cor">Cor (opcional)</Label>
-                <Input
-                  id="cat-cor"
-                  type="color"
-                  value={form.cor || "#3b82f6"}
-                  onChange={(e) => setForm({ ...form, cor: e.target.value })}
-                  className="bg-black/40 border-border/50 h-10 p-1 cursor-pointer"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cat-icone">Ícone (opcional)</Label>
-                <Input
-                  id="cat-icone"
-                  placeholder="tag"
-                  value={form.icone || ""}
-                  onChange={(e) => setForm({ ...form, icone: e.target.value })}
-                  className="bg-black/40 border-border/50 focus:border-primary/50"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                className="border-border/50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="bg-primary/80 hover:bg-primary text-white shadow-[0_0_12px_rgba(var(--primary),0.3)]"
-              >
-                {isSaving ? "Salvando..." : editingId ? "Salvar" : "Criar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CategoriaFormDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingId(null);
+        }}
+        editingId={editingId}
+        initialData={
+          editingId
+            ? (() => {
+                const cat = categorias?.find(c => c.id === editingId);
+                return cat ? {
+                  nome: cat.nome,
+                  tipo: cat.tipo,
+                  cor: cat.cor || "",
+                  icone: cat.icone || "",
+                  categoriaPaiId: cat.categoriaPaiId
+                } : undefined;
+              })()
+            : undefined
+        }
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>

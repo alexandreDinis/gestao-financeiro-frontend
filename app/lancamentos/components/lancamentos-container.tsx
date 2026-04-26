@@ -12,6 +12,22 @@ import { TransacaoFormDialog } from "./transacao-form-dialog";
 export function LancamentosContainer() {
   const searchParams = useSearchParams();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransacao, setEditingTransacao] = useState<any | null>(null);
+
+  const handleOpenForm = () => {
+    setEditingTransacao(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEdit = (t: any) => {
+    setEditingTransacao(t);
+    setIsFormOpen(true);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsFormOpen(open);
+    if (!open) setEditingTransacao(null);
+  };
 
   // Parse filters from URL
   const filters = {
@@ -38,7 +54,7 @@ export function LancamentosContainer() {
         </div>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setIsFormOpen(true)}
+            onClick={handleOpenForm}
             className="bg-primary/80 hover:bg-primary text-white shadow-[0_0_15px_rgba(var(--primary),0.3)] transition-all duration-300"
           >
             <Plus size={18} />
@@ -49,11 +65,12 @@ export function LancamentosContainer() {
 
       <TransacoesFilters currentFilters={filters} />
       
-      <TransacoesTable filters={filters} />
+      <TransacoesTable filters={filters} onEdit={handleEdit} />
 
       <TransacaoFormDialog 
         open={isFormOpen} 
-        onOpenChange={setIsFormOpen} 
+        onOpenChange={handleOpenChange} 
+        initialData={editingTransacao} 
       />
     </div>
   );

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building, Hand } from "lucide-react";
+import { Edit, MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building, Hand } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -36,7 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function TransacoesTable({ filters }: { filters: any }) {
+export function TransacoesTable({ filters, onEdit }: { filters: any, onEdit?: (t: LancamentoResponse) => void }) {
   const { data, isLoading, isError } = useTransacoes(filters);
   const { user } = useAuth();
   
@@ -164,6 +164,12 @@ export function TransacoesTable({ filters }: { filters: any }) {
           />
           <DropdownMenuContent align="end" className="glass-panel border-border/40 w-[160px]">
             {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
+              <DropdownMenuItem onClick={() => onEdit?.(t)} className="text-white cursor-pointer focus:bg-white/10">
+                <Edit size={14} className="mr-2" /> Editar
+              </DropdownMenuItem>
+            )}
+            
+            {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
               <DropdownMenuItem onClick={() => handleCancelar(t.transacaoId)} className="text-yellow-400 cursor-pointer focus:bg-yellow-500/10 focus:text-yellow-400">
                 <XCircle size={14} className="mr-2" /> Cancelar
               </DropdownMenuItem>
@@ -240,6 +246,11 @@ export function TransacoesTable({ filters }: { filters: any }) {
               }
             />
             <DropdownMenuContent align="end" className="glass-panel border-border/40">
+              {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
+                <DropdownMenuItem onClick={() => onEdit?.(t)} className="text-white cursor-pointer">
+                  <Edit size={14} className="mr-2" /> Editar
+                </DropdownMenuItem>
+              )}
               {canEdit(user) && t.status !== StatusTransacao.CANCELADO && (
                 <DropdownMenuItem onClick={() => handleCancelar(t.id)} className="text-yellow-400 cursor-pointer">
                   <XCircle size={14} className="mr-2" /> Cancelar

@@ -35,6 +35,24 @@ export function useCreateRecorrencia() {
   });
 }
 
+export function useUpdateRecorrencia() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number, data: Partial<Recorrencia> }) => api.put<Recorrencia>(`/recorrencias/${id}`, data),
+    onSuccess: () => {
+      toast.success("Recorrência atualizada", "As alterações foram salvas com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["recorrencias", user?.tenantId || "unknown"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["transacoes"] });
+    },
+    onError: () => {
+      toast.error("Erro", "Não foi possível atualizar a recorrência.");
+    }
+  });
+}
+
 export function useDeleteRecorrencia() {
   const queryClient = useQueryClient();
   const { user } = useAuth();

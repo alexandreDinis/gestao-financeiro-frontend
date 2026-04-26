@@ -106,6 +106,19 @@ export function ConfirmarPagamentoVencimentoDialog({
           contaId: data.contaId,
           dataPagamento: data.dataPagamento
         });
+      } else if (idUnico.startsWith("RECORRENCIA-PROJ-")) {
+        // 1. Materializar a projeção em uma transação real
+        const recId = idUnico.split("-")[2];
+        const ref = idUnico.split("-")[3]; // YYYY-MM
+        const materializarRes = await api.post(`/recorrencias/${recId}/materializar?referencia=${ref}`);
+        const realTransId = materializarRes.data.data.id;
+
+        // 2. Pagar a transação recém criada
+        await api.put(`/transacoes/${realTransId}/pagar`, {
+          contaId: data.contaId,
+          valor: data.valor,
+          dataPagamento: data.dataPagamento
+        });
       } else if (idUnico.startsWith("PARCELA-CARTAO-")) {
         toast.info("Parcelas de cartão são pagas através da fatura mensal.");
         setIsSubmitting(false);

@@ -302,6 +302,11 @@ export interface ResumoMeta {
   atrasada: boolean;
 }
 
+export interface SubcategoriaGasto {
+  nome: string;
+  gasto: number;
+}
+
 export interface ResumoOrcamento {
   orcamentoId: number;
   categoria: string;
@@ -310,6 +315,7 @@ export interface ResumoOrcamento {
   disponivel: number;
   percentualUtilizado: number;
   estourado: boolean;
+  subcategorias?: SubcategoriaGasto[];
 }
 
 export interface ResumoCartao {

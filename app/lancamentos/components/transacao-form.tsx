@@ -6,7 +6,8 @@ import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { NumericFormat } from "react-number-format";
-import { useCreateTransacao, useCreateTransacaoRecorrente } from "@/hooks/use-transacoes";
+import { useCreateTransacao, useCreateTransacaoRecorrente, useUpdateTransacao } from "@/hooks/use-transacoes";
+import { useUpdateRecorrencia } from "@/hooks/use-recorrencias";
 import { useCartoesQuery } from "@/features/cartoes/hooks/use-cartoes-query";
 import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
 import { useCriarDividaMutation } from "@/features/dividas/hooks/use-dividas-mutation";
@@ -15,7 +16,7 @@ import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
 import { format, addMonths } from "date-fns";
 
-import { TipoTransacao, TipoConta, Conta, Categoria, ApiResponse } from "@/types";
+import { TipoTransacao, TipoConta, Conta, Categoria, ApiResponse, TipoCategoria } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,9 +41,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { CategoriaFormDialog } from "../../categorias/components/categoria-form-dialog";
 
 // 1. Zod Validation Schema
 const transacaoSchema = z.object({
@@ -101,12 +103,8 @@ type TransacaoFormValues = z.infer<typeof transacaoSchema>;
 
 export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => void, initialData?: any }) {
   const createMutation = useCreateTransacao();
-  const updateRecorrenteMutation = { 
-    mutateAsync: async (data: any) => { 
-      return api.put(`/recorrencias/${initialData.id}`, data);
-    },
-    isPending: false
-  };
+  const updateMutation = useUpdateTransacao();
+  const updateRecorrenteMutation = useUpdateRecorrencia();
   const createRecorrenteMutation = useCreateTransacaoRecorrente();
   const compraCartaoMutation = useCompraCartaoMutation();
   const criarDividaMutation = useCriarDividaMutation();
@@ -153,9 +151,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
       tipo: (initialData.tipo === TipoTransacao.RECEITA || initialData.tipo === "RECEITA" ? TipoTransacao.RECEITA : 
              initialData.tipo === TipoTransacao.TRANSFERENCIA || initialData.tipo === "TRANSFERENCIA" ? TipoTransacao.TRANSFERENCIA : 
              TipoTransacao.DESPESA) as TipoTransacao,
-      data: initialData.data || initialData.dataInicio || new Date().toISOString().split("T")[0],
+      data: initialData.data || initialData.dataInicio || initialData.dataReferencia || new Date().toISOString().split("T")[0],
       dataVencimento: initialData.dataVencimento || null,
-      isRecorrente: initialData.isRecorrente || !!initialData.recorrenciaId || false,
+      isRecorrente: initialData.isRecorrente || !!initialData.recorrenciaId || !!initialData.periodicidade || false,
       periodicidade: initialData.periodicidade || null,
       categoriaId: initialData.categoriaId || initialData.categoria?.id || null,
       contaOrigemId: initialData.contaId || initialData.conta?.id || null,
@@ -200,6 +198,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   const [openOrigem, setOpenOrigem] = useState(false);
   const [openDestino, setOpenDestino] = useState(false);
   const [openCategoria, setOpenCategoria] = useState(false);
+  const [openNewCategoryDialog, setOpenNewCategoryDialog] = useState(false);
 
   const [searchOrigem, setSearchOrigem] = useState("");
   const [searchDestino, setSearchDestino] = useState("");
@@ -292,7 +291,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
         };
 
         if (initialData?.id) {
-          await updateRecorrenteMutation.mutateAsync(payload);
+          await updateRecorrenteMutation.mutateAsync({ id: initialData.id, data: payload as any });
         } else {
           await createRecorrenteMutation.mutateAsync(payload);
         }
@@ -326,7 +325,13 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
           dataVencimento: data.dataVencimento || undefined,
           status: data.isPago ? "PAGO" : "PENDENTE",
         };
-        await createMutation.mutateAsync(payload as any);
+
+        if (initialData?.transacaoId || initialData?.id) {
+          const id = initialData.transacaoId || initialData.id;
+          await updateMutation.mutateAsync({ id, data: payload as any });
+        } else {
+          await createMutation.mutateAsync(payload as any);
+        }
       }
       reset();
       onSuccess();
@@ -712,6 +717,20 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
                               <span className="truncate">{c.nome}</span>
                             </button>
                           ))}
+                        <div className="p-2 border-t border-border/40 bg-black/20 mt-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full justify-start text-primary hover:text-primary hover:bg-primary/10 h-8 px-2"
+                            onClick={() => {
+                              setOpenCategoria(false);
+                              setOpenNewCategoryDialog(true);
+                            }}
+                          >
+                            <Plus size={14} className="mr-2" />
+                            Nova Categoria
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </PopoverContent>
@@ -1021,6 +1040,16 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
         open={inlinePessoaOpen} 
         onOpenChange={setInlinePessoaOpen} 
         onSuccessCallback={onPessoaCriada} 
+      />
+      <CategoriaFormDialog
+        open={openNewCategoryDialog}
+        onOpenChange={setOpenNewCategoryDialog}
+        initialData={{ tipo: (tipoSelecionado as any) === "RECEITA" ? TipoCategoria.RECEITA : TipoCategoria.DESPESA }}
+        onSuccess={(newCat) => {
+          if (newCat) {
+            setValue("categoriaId", newCat.id);
+          }
+        }}
       />
     </>
   );
