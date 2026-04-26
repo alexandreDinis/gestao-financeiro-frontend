@@ -77,6 +77,13 @@ export enum OrigemLancamento {
   FATURA = "FATURA",
 }
 
+export enum OrigemVencimento {
+  TRANSACAO = "TRANSACAO",
+  PARCELA = "PARCELA",
+  FATURA = "FATURA",
+  RECORRENCIA = "RECORRENCIA",
+}
+
 export enum TipoMovimentacao {
   RECEITA = "RECEITA",
   DESPESA = "DESPESA",
@@ -272,12 +279,13 @@ export interface Vencimento {
   idUnico: string;
   transacaoId?: number | null;
   parcelaId?: number | null;
+  contaId?: number | null;
   descricao: string;
   valor: number;
   dataVencimento: string;
   diasRestantes: number;
   conta: string;
-  origem: OrigemLancamento;
+  origem: OrigemVencimento;
   tipo: TipoMovimentacao;
   atrasado: boolean;
   venceHoje: boolean;

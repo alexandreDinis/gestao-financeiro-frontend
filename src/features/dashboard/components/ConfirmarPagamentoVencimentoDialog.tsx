@@ -123,6 +123,10 @@ export function ConfirmarPagamentoVencimentoDialog({
         toast.info("Parcelas de cartão são pagas através da fatura mensal.");
         setIsSubmitting(false);
         return;
+      } else if (idUnico.startsWith("VIRTUAL-FATURA-")) {
+        toast.info("Esta é uma fatura projetada (composta apenas por assinaturas previstas). Ela poderá ser paga quando o ciclo for fechado ou a primeira transação real for lançada.");
+        setIsSubmitting(false);
+        return;
       } else {
         toast.error("Tipo de vencimento não suportado para pagamento direto.");
         setIsSubmitting(false);
