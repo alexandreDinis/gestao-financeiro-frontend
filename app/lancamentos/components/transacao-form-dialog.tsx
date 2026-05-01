@@ -21,11 +21,11 @@ export function TransacaoFormDialog({ open, onOpenChange, initialData }: FormDia
       <DialogContent className="glass-panel border-border/40 sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-white text-xl flex items-center gap-2">
-            {initialData ? "Editar Recorrência" : "Novo Lançamento"}
+            {initialData ? "Editar Lançamento" : "Novo Lançamento"}
           </DialogTitle>
           <DialogDescription>
             {initialData 
-              ? "Atualize os detalhes da sua transação recorrente." 
+              ? "Atualize os detalhes do seu lançamento." 
               : "Preencha os dados abaixo para registrar uma transação."}
           </DialogDescription>
         </DialogHeader>

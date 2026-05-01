@@ -101,6 +101,18 @@ export function DashboardBudgets({ orcamentos, loading }: Props) {
                       )}
                    </div>
                 </div>
+                
+                {/* Subcategories Compact Breakdown */}
+                {orcamento.subcategorias && orcamento.subcategorias.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                    {orcamento.subcategorias.toSorted((a, b) => b.gasto - a.gasto).map((sub, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-white/5 border border-white/5 text-muted-foreground">
+                        <span className="truncate max-w-[80px]">{sub.nome}</span>
+                        <span className="text-white/80">{formatCurrency(sub.gasto)}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

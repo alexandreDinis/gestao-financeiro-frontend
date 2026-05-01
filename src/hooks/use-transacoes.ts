@@ -83,6 +83,23 @@ export function useCreateTransacao() {
   });
 }
 
+export function useUpdateTransacao() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number, data: TransacaoRequest }) => api.put(`/transacoes/${id}`, data),
+    onSuccess: () => {
+      toast.success("Transação atualizada", "O lançamento foi modificado com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: () => {
+      toast.error("Erro", "Não foi possível atualizar o lançamento.");
+    }
+  });
+}
+
 export function useCreateTransacaoRecorrente() {
   const queryClient = useQueryClient();
   const { user } = useAuth();

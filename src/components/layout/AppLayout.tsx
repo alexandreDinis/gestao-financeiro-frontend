@@ -17,13 +17,15 @@ import {
   Target,
   Clock,
   Settings,
-  RefreshCcw
+  RefreshCcw,
+  LineChart
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Previsão de Caixa", href: "/previsao", icon: LineChart },
   { name: "Transações", href: "/lancamentos", icon: ArrowLeftRight },
   { name: "Contas a Pagar", href: "/contas", icon: Clock },
   { name: "Bancos & Saldos", href: "/bancos", icon: Wallet },

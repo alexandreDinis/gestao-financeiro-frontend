@@ -8,6 +8,7 @@ export interface Parcela {
   dataVencimento: string;
   paga: boolean;
   descricaoTransacao: string;
+  isRecorrente: boolean;
 }
 
 export interface FaturaCartao {

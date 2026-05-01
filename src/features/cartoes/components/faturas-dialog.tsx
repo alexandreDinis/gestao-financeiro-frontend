@@ -38,7 +38,7 @@ function FaturaDetailView({
   const s = statusColors[fatura.status] || statusColors.ABERTA;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0 h-full">
       {/* Header com botão voltar */}
       <div className="flex items-center gap-3 mb-5">
         <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10 shrink-0">
@@ -113,7 +113,7 @@ function FaturaDetailView({
         ) : (
           <div className="space-y-6 pb-4">
             {/* 1. Recorrentes */}
-            {fatura.parcelas.filter(p => p.totalParcelas <= 1 && fatura.totalRecorrente > 0).length > 0 && (
+            {fatura.parcelas.filter(p => p.isRecorrente).length > 0 && (
                <div className="space-y-2">
                  <div className="flex items-center justify-between px-1">
                     <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -122,7 +122,7 @@ function FaturaDetailView({
                     <span className="text-[10px] font-bold text-purple-400/50">{formatCurrency(fatura.totalRecorrente)}</span>
                  </div>
                  {fatura.parcelas
-                   .filter(p => p.totalParcelas <= 1 && fatura.totalRecorrente > 0)
+                   .filter(p => p.isRecorrente)
                    .map(p => <ParcelaItem key={p.id} parcela={p} icon={<RefreshCcw size={14} className="text-purple-400" />} color="purple" />)}
                </div>
             )}
@@ -143,7 +143,7 @@ function FaturaDetailView({
             )}
 
             {/* 3. Avulsos / Únicos */}
-            {fatura.parcelas.filter(p => p.totalParcelas <= 1 && fatura.totalRecorrente <= 0).length > 0 && (
+            {fatura.parcelas.filter(p => p.totalParcelas <= 1 && !p.isRecorrente).length > 0 && (
                <div className="space-y-2">
                  <div className="flex items-center justify-between px-1">
                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -152,7 +152,7 @@ function FaturaDetailView({
                     <span className="text-[10px] font-bold text-emerald-400/50">{formatCurrency(fatura.totalUnico)}</span>
                  </div>
                  {fatura.parcelas
-                   .filter(p => p.totalParcelas <= 1 && fatura.totalRecorrente <= 0)
+                   .filter(p => p.totalParcelas <= 1 && !p.isRecorrente)
                    .map(p => <ParcelaItem key={p.id} parcela={p} icon={<Zap size={14} className="text-emerald-400" />} color="emerald" />)}
                </div>
             )}

@@ -15,6 +15,12 @@ export interface OrcamentoResumoResponse {
   gasto: number;
   restante: number;
   percentual: number;
+  subcategorias?: {
+    categoriaId: number;
+    nome: string;
+    cor: string;
+    gasto: number;
+  }[];
 }
 
 export interface OrcamentoRequest {
