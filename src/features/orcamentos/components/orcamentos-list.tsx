@@ -181,6 +181,37 @@ export function OrcamentosList({ mes, ano }: OrcamentosListProps) {
                     ></div>
                   </div>
                 </div>
+
+                {/* Subcategories Breakdown */}
+                {orc.subcategorias && orc.subcategorias.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border/20 space-y-3">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      Detalhamento por Subcategoria
+                    </p>
+                    {orc.subcategorias.toSorted((a, b) => b.gasto - a.gasto).map((sub) => {
+                      const subPercent = orc.gasto > 0 ? (sub.gasto / orc.gasto) * 100 : 0;
+                      return (
+                        <div key={sub.categoriaId} className="flex items-center gap-3">
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full" 
+                            style={{ backgroundColor: sub.cor || 'rgba(255,255,255,0.2)' }} 
+                          />
+                          <div className="flex-1 flex justify-between items-center min-w-0">
+                            <span className="text-sm text-white/90 truncate">{sub.nome}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">
+                                {formatCurrency(sub.gasto)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground w-8 text-right">
+                                {subPercent.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

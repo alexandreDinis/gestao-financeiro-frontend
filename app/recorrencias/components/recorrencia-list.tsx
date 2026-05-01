@@ -4,6 +4,8 @@ import { useRecorrencias, useDeleteRecorrencia } from "@/hooks/use-recorrencias"
 import { Recorrencia, StatusRecorrencia } from "@/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/axios";
 import { 
   Table, 
   TableBody, 
@@ -28,8 +30,11 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
+import { Check } from "lucide-react";
 import { useState } from "react";
 
 const statusColors: any = {
@@ -48,6 +53,21 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
   const deleteMutation = useDeleteRecorrencia();
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const { data: categoriasData } = useQuery<any>({
+    queryKey: ["categorias"],
+    queryFn: () => api.get("/categorias").then(res => res.data)
+  });
+  const categorias = categoriasData?.data || [];
+
+  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set());
+
+  const toggleCategory = (catId: number) => {
+    const next = new Set(selectedCategories);
+    if (next.has(catId)) next.delete(catId);
+    else next.add(catId);
+    setSelectedCategories(next);
+  };
+
   if (isLoading) return <div className="text-center p-8">Carregando...</div>;
   if (isError) return <div className="text-center p-8 text-red-400">Erro ao carregar recorrências.</div>;
 
@@ -55,9 +75,67 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
+  const filteredRecorrencias = recorrencias?.filter((rec: any) => {
+    if (selectedCategories.size === 0) return true;
+    if (!rec.categoria) return false;
+    return selectedCategories.has(rec.categoria.id);
+  });
+
+  const totalValue = filteredRecorrencias?.reduce((acc: number, rec: any) => acc + rec.valor, 0) || 0;
+
   return (
-    <div className="glass-panel overflow-hidden">
-      <Table>
+    <div className="flex flex-col gap-4">
+      {/* Barra de Filtros e Resumo */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-black/20 p-4 rounded-xl border border-border/20">
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger render={
+              <Button variant="outline" className="border-border/30 bg-transparent text-white">
+                <Tag size={14} className="mr-2 text-muted-foreground" />
+                Categorias {selectedCategories.size > 0 && `(${selectedCategories.size})`}
+              </Button>
+            } />
+            <DropdownMenuContent align="start" className="glass-panel border-border/40 w-56">
+              <DropdownMenuLabel>Filtrar por Categoria</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border/20" />
+              {categorias.map((cat: any) => {
+                const isSelected = selectedCategories.has(cat.id);
+                return (
+                  <DropdownMenuItem
+                    key={cat.id}
+                    onClick={(e) => { e.preventDefault(); toggleCategory(cat.id); }}
+                    className="cursor-pointer flex items-center gap-2"
+                  >
+                    <div className={`w-4 h-4 flex items-center justify-center border rounded-sm ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {isSelected && <Check size={12} className="text-white" />}
+                    </div>
+                    {cat.nome}
+                  </DropdownMenuItem>
+                );
+              })}
+              {selectedCategories.size > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-border/20" />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-center justify-center text-muted-foreground hover:text-white"
+                    onClick={() => setSelectedCategories(new Set())}
+                  >
+                    Limpar Filtros
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="flex flex-col text-right">
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-0.5">Total Previsto</span>
+          <span className="text-xl font-bold text-white">{formatCurrency(totalValue)}</span>
+        </div>
+      </div>
+
+      <div className="glass-panel overflow-hidden">
+        <Table>
         <TableHeader>
           <TableRow className="border-border/40 hover:bg-transparent">
             <TableHead className="text-muted-foreground">Descrição</TableHead>
@@ -69,7 +147,7 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {recorrencias?.map((rec: any) => (
+          {filteredRecorrencias?.map((rec: any) => (
             <TableRow key={rec.id} className="border-border/20 group hover:bg-white/5 transition-colors">
               <TableCell className="font-medium text-white py-4">
                 <div className="flex flex-col gap-0.5">
@@ -104,11 +182,11 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
-                  <DropdownMenuTrigger>
+                  <DropdownMenuTrigger render={
                     <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                       <MoreVertical size={16} />
                     </Button>
-                  </DropdownMenuTrigger>
+                  } />
                   <DropdownMenuContent align="end" className="glass-panel border-border/40">
                     <DropdownMenuItem 
                       onClick={() => onEdit?.(rec)}
@@ -127,7 +205,7 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
               </TableCell>
             </TableRow>
           ))}
-          {(!recorrencias || recorrencias.length === 0) && (
+          {(!filteredRecorrencias || filteredRecorrencias.length === 0) && (
             <TableRow>
               <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                 Nenhuma recorrência cadastrada.
@@ -136,6 +214,7 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
           )}
         </TableBody>
       </Table>
+    </div>
     </div>
   );
 }
