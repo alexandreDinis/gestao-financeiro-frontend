@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeftRight } from "lucide-react";
 
@@ -29,8 +29,18 @@ export function LancamentosContainer() {
     if (!open) setEditingTransacao(null);
   };
 
-  // Parse filters from URL
-  const filters = {
+  // Page state for pagination
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+
+  // Reset page when filters change (URL params)
+  const filterKey = searchParams.toString();
+  useEffect(() => {
+    setPage(0);
+  }, [filterKey]);
+
+  // Parse filters from URL — use filterKey as dependency to ensure recomputation
+  const filters = useMemo(() => ({
     mes: searchParams.get("mes") ? Number(searchParams.get("mes")) : new Date().getMonth() + 1,
     ano: searchParams.get("ano") ? Number(searchParams.get("ano")) : new Date().getFullYear(),
     busca: searchParams.get("busca") || undefined,
@@ -40,7 +50,10 @@ export function LancamentosContainer() {
     origem: searchParams.get("origem") || undefined,
     categoriaId: searchParams.get("categoriaId") ? Number(searchParams.get("categoriaId")) : undefined,
     contaId: searchParams.get("contaId") ? Number(searchParams.get("contaId")) : undefined,
-  };
+    page,
+    size: pageSize,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filterKey, page, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -65,7 +78,7 @@ export function LancamentosContainer() {
 
       <TransacoesFilters currentFilters={filters} />
       
-      <TransacoesTable filters={filters} onEdit={handleEdit} />
+      <TransacoesTable filters={filters} onEdit={handleEdit} page={page} onPageChange={setPage} />
 
       <TransacaoFormDialog 
         open={isFormOpen} 

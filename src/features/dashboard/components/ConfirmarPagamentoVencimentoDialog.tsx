@@ -108,8 +108,11 @@ export function ConfirmarPagamentoVencimentoDialog({
         });
       } else if (idUnico.startsWith("RECORRENCIA-PROJ-")) {
         // 1. Materializar a projeção em uma transação real
-        const recId = idUnico.split("-")[2];
-        const ref = idUnico.split("-")[3]; // YYYY-MM
+        // Format: RECORRENCIA-PROJ-{id}-{YYYY-MM}
+        // split("-") yields ["RECORRENCIA","PROJ","{id}","{YYYY}","{MM}"]
+        const parts = idUnico.split("-");
+        const recId = parts[2];
+        const ref = parts[3] + "-" + parts[4]; // YYYY-MM
         const materializarRes = await api.post(`/recorrencias/${recId}/materializar?referencia=${ref}`);
         const realTransId = materializarRes.data.data.id;
 

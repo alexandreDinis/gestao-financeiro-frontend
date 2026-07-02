@@ -142,13 +142,65 @@ export function CartoesList() {
 
   if (isLoading) return <div className="text-muted-foreground">Carregando cartões...</div>;
 
+  const totalLimite = cartoes?.reduce((acc, c) => acc + c.limiteTotal, 0) || 0;
+  const totalUtilizado = cartoes?.reduce((acc, c) => acc + c.utilizado, 0) || 0;
+  const totalDisponivel = cartoes?.reduce((acc, c) => acc + c.disponivel, 0) || 0;
+  
+  // Soma do que vai vencer no mês: Fatura Aberta (atual do mês) + Faturas Fechadas (já fechou mas não pagou)
+  const totalFaturasAbertas = cartoes?.reduce((acc, c) => acc + c.valorFaturaAberta, 0) || 0;
+  const totalFaturasFechadas = cartoes?.reduce((acc, c) => acc + c.valorFaturasFechadas, 0) || 0;
+  const totalVencerMes = totalFaturasAbertas + totalFaturasFechadas;
+  
+  const percentualGeral = totalLimite > 0 ? (totalUtilizado / totalLimite) * 100 : 0;
+
   return (
     <div>
-      <div className="mb-6 flex justify-end">
-        <Button onClick={handleOpenNew}>
-          <PlusCircle className="mr-2" size={18} /> Novo Cartão
-        </Button>
-      </div>
+      {cartoes && cartoes.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="glass-panel p-5 rounded-2xl border border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -translate-y-4 translate-x-4" />
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Limite Total (Todos Cartões)</p>
+            <p className="text-2xl font-black text-white">{formatCurrency(totalLimite)}</p>
+            <div className="mt-3 flex items-center justify-between text-[10px] text-muted-foreground">
+               <span>Utilizado: {formatCurrency(totalUtilizado)}</span>
+               <span>Disponível: {formatCurrency(totalDisponivel)}</span>
+            </div>
+            <div className="mt-1 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+               <div className="h-full bg-primary transition-all duration-500" style={{ width: `${Math.min(percentualGeral, 100)}%` }} />
+            </div>
+          </div>
+
+          <div className="glass-panel p-5 rounded-2xl border border-red-500/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-full -translate-y-4 translate-x-4" />
+            <p className="text-[10px] text-red-400 uppercase tracking-widest font-bold mb-1">
+              Total Faturas {new Date().toLocaleString('pt-BR', { month: 'long' })}
+            </p>
+            <p className="text-2xl font-black text-red-400">{formatCurrency(totalVencerMes)}</p>
+            <div className="mt-3 flex items-center justify-between text-[10px] text-muted-foreground">
+               <span>Faturas Abertas: {formatCurrency(totalFaturasAbertas)}</span>
+               <span>Faturas Fechadas: {formatCurrency(totalFaturasFechadas)}</span>
+            </div>
+          </div>
+          
+          <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-center items-center">
+            <p className="text-sm text-muted-foreground mb-3">Adicionar um novo cartão</p>
+            <Button onClick={handleOpenNew} className="w-full">
+              <PlusCircle className="mr-2" size={18} /> Novo Cartão
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {(!cartoes || cartoes.length > 0) && (
+        <div className="mb-6 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-white">Meus Cartões</h2>
+          {cartoes && cartoes.length > 0 && (
+             <Button variant="outline" className="border-white/10 bg-white/5" onClick={handleOpenNew}>
+               <PlusCircle className="mr-2" size={16} /> Adicionar
+             </Button>
+          )}
+        </div>
+      )}
 
       {!cartoes || cartoes.length === 0 ? (
         <div className="text-center p-12 glass-panel border border-border/40 rounded-xl">

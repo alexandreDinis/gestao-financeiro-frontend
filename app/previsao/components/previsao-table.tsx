@@ -32,8 +32,8 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
     }
   }, [meses, editingKey]);
 
-  const handleEditClick = (mes: number, ano: number, type: 'entrada' | 'saida', currentValue: number) => {
-    setEditingKey(`${mes}-${ano}-${type}`);
+  const handleEditClick = (mesStr: string, type: 'entrada' | 'saida', currentValue: number) => {
+    setEditingKey(`${mesStr}-${type}`);
     setEditValue(currentValue > 0 ? currentValue.toString() : "");
   };
 
@@ -44,28 +44,29 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
     const val = parseFloat(editValue) || 0;
     
     // Check if value actually changed
-    const currentVal = type === 'entrada' ? mesObj.ajusteEntrada : mesObj.ajusteSaida;
+    const currentVal = type === 'entrada' ? mesObj.ajusteManual.entrada : mesObj.ajusteManual.saida;
     if (val !== currentVal) {
       salvarAjuste.mutate({
-        mes: mesObj.mes,
-        ano: mesObj.ano,
-        ajusteEntrada: type === 'entrada' ? val : mesObj.ajusteEntrada,
-        ajusteSaida: type === 'saida' ? val : mesObj.ajusteSaida
+        mes: parseInt(mesObj.mes.split("-")[1], 10),
+        ano: parseInt(mesObj.mes.split("-")[0], 10),
+        ajusteEntrada: type === 'entrada' ? val : mesObj.ajusteManual.entrada,
+        ajusteSaida: type === 'saida' ? val : mesObj.ajusteManual.saida
       });
       
       // Optmistic local update for cascade effect until server responds
       const newMeses = [...localMeses];
-      if (type === 'entrada') newMeses[index].ajusteEntrada = val;
-      if (type === 'saida') newMeses[index].ajusteSaida = val;
+      if (type === 'entrada') newMeses[index].ajusteManual.entrada = val;
+      if (type === 'saida') newMeses[index].ajusteManual.saida = val;
       
       let currentSaldo = index > 0 ? newMeses[index-1].saldoFinal : newMeses[index].saldoInicial;
       for (let i = index; i < newMeses.length; i++) {
         newMeses[i].saldoInicial = currentSaldo;
         newMeses[i].saldoFinal = currentSaldo 
-          + newMeses[i].entradasPrevistas 
-          + newMeses[i].ajusteEntrada 
-          - newMeses[i].saidasPrevistas 
-          - newMeses[i].ajusteSaida;
+          + newMeses[i].receitasFixas 
+          - newMeses[i].despesasFixas
+          - newMeses[i].estimativaVariavel.valor
+          + newMeses[i].ajusteManual.entrada 
+          - newMeses[i].ajusteManual.saida;
         currentSaldo = newMeses[i].saldoFinal;
       }
       setLocalMeses(newMeses);
@@ -81,7 +82,51 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
           <tr>
             <th className="px-4 py-3 rounded-tl-lg">Mês</th>
             <th className="px-4 py-3">Saldo Inicial</th>
-            <th className="px-4 py-3">Previsto Sistema</th>
+            <th className="px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                Receitas Fixas
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[200px] text-xs">
+                      Receitas já previstas ou recorrentes
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </th>
+            <th className="px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                Despesas Fixas
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[200px] text-xs">
+                      Faturas e contas fixas agendadas
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </th>
+            <th className="px-4 py-3">
+              <div className="flex items-center gap-1.5 text-amber-500/80">
+                Variável (Estimado)
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[250px] text-xs">
+                      Média móvel de gastos variáveis dos últimos meses fechados
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </th>
             <th className="px-4 py-3">
               <div className="flex items-center gap-1.5">
                 Ajuste Manual
@@ -91,7 +136,7 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
                       <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-[200px] text-xs">
-                      Use para incluir entradas ou saídas que ainda não estão registradas no sistema para este mês.
+                      Use para incluir valores avulsos não cadastrados
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -102,21 +147,54 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
         </thead>
         <tbody>
           {localMeses.map((m, idx) => {
-            const dataRef = new Date(m.ano, m.mes - 1);
+            const [ano, mes] = m.mes.split("-").map(Number);
+            const dataRef = new Date(ano, mes - 1);
             const mesFormatado = format(dataRef, "MMMM/yy", { locale: ptBR });
             
-            const isEditingEntrada = editingKey === `${m.mes}-${m.ano}-entrada`;
-            const isEditingSaida = editingKey === `${m.mes}-${m.ano}-saida`;
+            const isEditingEntrada = editingKey === `${m.mes}-entrada`;
+            const isEditingSaida = editingKey === `${m.mes}-saida`;
 
             return (
-              <tr key={`${m.mes}-${m.ano}`} className="border-b border-border/50 hover:bg-muted/20">
+              <tr key={m.mes} className="border-b border-border/50 hover:bg-muted/20">
                 <td className="px-4 py-3 font-medium capitalize">{mesFormatado}</td>
                 <td className="px-4 py-3 text-muted-foreground">{formatCurrency(m.saldoInicial)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="text-emerald-500">+{formatCurrency(m.entradasPrevistas)}</span>
-                    <span className="text-rose-500">-{formatCurrency(m.saidasPrevistas)}</span>
-                  </div>
+                  <span className="text-emerald-500">+{formatCurrency(m.receitasFixas)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-rose-500">-{formatCurrency(m.despesasFixas)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-amber-500/90 border-b border-dashed border-amber-500/30 cursor-help">
+                          -{formatCurrency(m.estimativaVariavel.valor)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="w-[280px] p-0" sideOffset={8}>
+                        <div className="px-4 py-3 border-b border-border/50">
+                          <p className="font-semibold text-sm">Detalhamento Estimado</p>
+                          <p className="text-xs text-muted-foreground">Baseado em {m.estimativaVariavel.mesesConsiderados} meses de histórico</p>
+                        </div>
+                        <div className="max-h-[200px] overflow-y-auto p-2">
+                          <div className="space-y-1">
+                            {m.estimativaVariavel.porCategoria.map(cat => (
+                              <div key={cat.categoriaId} className="flex justify-between items-center text-xs p-1.5 hover:bg-muted/50 rounded-md">
+                                <span className="truncate max-w-[150px]">{cat.nome}</span>
+                                <span className="font-medium text-amber-500/80">{formatCurrency(cat.media)}</span>
+                              </div>
+                            ))}
+                            {m.estimativaVariavel.porCategoria.length === 0 && (
+                              <div className="text-xs text-center text-muted-foreground py-2">
+                                Sem histórico variável
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-2">
@@ -144,15 +222,15 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
                         <>
                           <div 
                             className="flex-1 text-emerald-500 font-medium cursor-pointer hover:text-emerald-400 transition-colors"
-                            onClick={() => handleEditClick(m.mes, m.ano, 'entrada', m.ajusteEntrada)}
+                            onClick={() => handleEditClick(m.mes, 'entrada', m.ajusteManual.entrada)}
                           >
-                            +{formatCurrency(m.ajusteEntrada)}
+                            +{formatCurrency(m.ajusteManual.entrada)}
                           </div>
                           <Button 
                             size="icon" 
                             variant="ghost" 
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
-                            onClick={() => handleEditClick(m.mes, m.ano, 'entrada', m.ajusteEntrada)}
+                            onClick={() => handleEditClick(m.mes, 'entrada', m.ajusteManual.entrada)}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -184,15 +262,15 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
                         <>
                           <div 
                             className="flex-1 text-rose-500 font-medium cursor-pointer hover:text-rose-400 transition-colors"
-                            onClick={() => handleEditClick(m.mes, m.ano, 'saida', m.ajusteSaida)}
+                            onClick={() => handleEditClick(m.mes, 'saida', m.ajusteManual.saida)}
                           >
-                            -{formatCurrency(m.ajusteSaida)}
+                            -{formatCurrency(m.ajusteManual.saida)}
                           </div>
                           <Button 
                             size="icon" 
                             variant="ghost" 
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
-                            onClick={() => handleEditClick(m.mes, m.ano, 'saida', m.ajusteSaida)}
+                            onClick={() => handleEditClick(m.mes, 'saida', m.ajusteManual.saida)}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>

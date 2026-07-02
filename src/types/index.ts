@@ -359,3 +359,44 @@ export interface DashboardResponse {
   cartoes: ResumoCartao[];
   alertas: AlertaDashboard[];
 }
+
+// ==========================================
+// RELATÓRIO DE GASTOS MENSAIS
+// ==========================================
+
+export interface TransacaoRelatorio {
+  id: number;
+  descricao: string;
+  valor: number;
+  data: string;
+  status: string;
+  origem?: string; // "CARTAO" para parcelas de cartão de crédito
+}
+
+export interface SubcategoriaRelatorio {
+  subcategoriaId: number;
+  nome: string;
+  cor: string | null;
+  icone: string | null;
+  totalSubcategoria: number;
+  percentual: number;
+  transacoes: TransacaoRelatorio[];
+}
+
+export interface CategoriaRelatorio {
+  categoriaId: number | null;
+  nome: string;
+  cor: string | null;
+  icone: string | null;
+  totalCategoria: number;
+  percentual: number;
+  subcategorias: SubcategoriaRelatorio[];
+  transacoesDiretas: TransacaoRelatorio[];
+}
+
+export interface RelatorioGastosMensais {
+  mes: number;
+  ano: number;
+  totalGeral: number;
+  categorias: CategoriaRelatorio[];
+}

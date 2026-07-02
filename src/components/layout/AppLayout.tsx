@@ -18,7 +18,8 @@ import {
   Clock,
   Settings,
   RefreshCcw,
-  LineChart
+  LineChart,
+  FileBarChart
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -26,6 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Previsão de Caixa", href: "/previsao", icon: LineChart },
+  { name: "Relatórios", href: "/relatorios", icon: FileBarChart },
   { name: "Transações", href: "/lancamentos", icon: ArrowLeftRight },
   { name: "Contas a Pagar", href: "/contas", icon: Clock },
   { name: "Bancos & Saldos", href: "/bancos", icon: Wallet },
