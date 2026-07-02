@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building, Hand } from "lucide-react";
+import { Edit, MoreVertical, CheckCircle, XCircle, Trash2, ArrowLeftRight, Clock, Building, Hand, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -36,7 +36,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function TransacoesTable({ filters, onEdit }: { filters: any, onEdit?: (t: LancamentoResponse) => void }) {
+interface TransacoesTableProps {
+  filters: any;
+  onEdit?: (t: LancamentoResponse) => void;
+  page: number;
+  onPageChange: (page: number) => void;
+}
+
+export function TransacoesTable({ filters, onEdit, page, onPageChange }: TransacoesTableProps) {
   const { data, isLoading, isError } = useTransacoes(filters);
   const { user } = useAuth();
   
@@ -48,6 +55,7 @@ export function TransacoesTable({ filters, onEdit }: { filters: any, onEdit?: (t
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const transacoes = data?.data || [];
+  const meta = data?.meta;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -83,15 +91,7 @@ export function TransacoesTable({ filters, onEdit }: { filters: any, onEdit?: (t
     );
   }
 
-  if (transacoes.length === 0) {
-    return (
-      <div className="glass-panel p-12 text-center rounded-lg border-border/40 flex flex-col items-center">
-        <ArrowLeftRight size={48} className="text-muted-foreground/30 mb-4" />
-        <h3 className="text-xl font-bold text-white tracking-widest uppercase mb-2">Nenhum Lançamento Encontrado</h3>
-        <p className="text-muted-foreground">Tente limpar os filtros ou criar um novo lançamento.</p>
-      </div>
-    );
-  }
+  const isEmpty = transacoes.length === 0;
 
   // Row Renderer for the standard table
   const DesktopRow = ({ t }: { t: LancamentoResponse }) => (
@@ -271,34 +271,124 @@ export function TransacoesTable({ filters, onEdit }: { filters: any, onEdit?: (t
     </div>
   );
 
+  const totalPages = meta?.totalPages ?? 1;
+  const totalElements = meta?.totalElements ?? transacoes.length;
+  const currentPage = meta?.page ?? page;
+  const pageSize = meta?.size ?? filters.size ?? 50;
+
   return (
     <>
       <div className="rounded-lg overflow-hidden">
-        {/* Desktop View */}
-        <div className="hidden md:block glass-panel">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/40 hover:bg-transparent">
-                <TableHead className="text-muted-foreground w-[120px]">Data</TableHead>
-                <TableHead className="text-muted-foreground min-w-[200px]">Descrição/Categoria</TableHead>
-                <TableHead className="text-muted-foreground w-[130px]">Tipo</TableHead>
-                <TableHead className="text-muted-foreground w-[150px]">Conta</TableHead>
-                <TableHead className="text-muted-foreground w-[120px]">Status</TableHead>
-                <TableHead className="text-muted-foreground text-right w-[150px]">Valor</TableHead>
-                <TableHead className="text-right w-[80px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transacoes.map((t) => <DesktopRow key={`${t.origem}-${t.id}`} t={t} />)}
-            </TableBody>
-          </Table>
-        </div>
+        {isEmpty ? (
+          <div className="glass-panel p-12 text-center rounded-lg border-border/40 flex flex-col items-center">
+            <ArrowLeftRight size={48} className="text-muted-foreground/30 mb-4" />
+            <h3 className="text-xl font-bold text-white tracking-widest uppercase mb-2">Nenhum Lançamento Encontrado</h3>
+            <p className="text-muted-foreground">Tente limpar os filtros ou criar um novo lançamento.</p>
+            {page > 0 && (
+              <Button
+                variant="outline"
+                className="mt-4 border-border/50 hover:bg-white/10"
+                onClick={() => onPageChange(0)}
+              >
+                <ChevronsLeft size={16} className="mr-2" />
+                Voltar à primeira página
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Desktop View */}
+            <div className="hidden md:block glass-panel">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/40 hover:bg-transparent">
+                    <TableHead className="text-muted-foreground w-[120px]">Data</TableHead>
+                    <TableHead className="text-muted-foreground min-w-[200px]">Descrição/Categoria</TableHead>
+                    <TableHead className="text-muted-foreground w-[130px]">Tipo</TableHead>
+                    <TableHead className="text-muted-foreground w-[150px]">Conta</TableHead>
+                    <TableHead className="text-muted-foreground w-[120px]">Status</TableHead>
+                    <TableHead className="text-muted-foreground text-right w-[150px]">Valor</TableHead>
+                    <TableHead className="text-right w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transacoes.map((t) => <DesktopRow key={`${t.origem}-${t.id}`} t={t} />)}
+                </TableBody>
+              </Table>
+            </div>
 
-        {/* Mobile View */}
-        <div className="grid grid-cols-1 gap-4 md:hidden">
-          {transacoes.map((t) => <MobileCard key={`${t.origem}-${t.id}`} t={t} />)}
-        </div>
+            {/* Mobile View */}
+            <div className="grid grid-cols-1 gap-4 md:hidden">
+              {transacoes.map((t) => <MobileCard key={`${t.origem}-${t.id}`} t={t} />)}
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 glass-panel p-4 rounded-lg border-border/40">
+          <span className="text-sm text-muted-foreground">
+            Mostrando {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} de{" "}
+            <span className="font-medium text-white">{totalElements}</span> lançamentos
+          </span>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-border/50 hover:bg-white/10"
+              disabled={currentPage === 0}
+              onClick={() => onPageChange(0)}
+              title="Primeira página"
+            >
+              <ChevronsLeft size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-border/50 hover:bg-white/10"
+              disabled={currentPage === 0}
+              onClick={() => onPageChange(currentPage - 1)}
+              title="Página anterior"
+            >
+              <ChevronLeft size={16} />
+            </Button>
+
+            <span className="px-3 text-sm text-white tabular-nums">
+              {currentPage + 1} / {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-border/50 hover:bg-white/10"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => onPageChange(currentPage + 1)}
+              title="Próxima página"
+            >
+              <ChevronRight size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 border-border/50 hover:bg-white/10"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => onPageChange(totalPages - 1)}
+              title="Última página"
+            >
+              <ChevronsRight size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Total summary when single page */}
+      {totalPages <= 1 && transacoes.length > 0 && (
+        <div className="text-center text-sm text-muted-foreground py-2">
+          Total: <span className="font-medium text-white">{totalElements}</span> lançamento{totalElements !== 1 ? 's' : ''}
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>

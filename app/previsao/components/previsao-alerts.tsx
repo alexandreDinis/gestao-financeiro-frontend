@@ -25,7 +25,8 @@ export default function PrevisaoAlerts({ meses }: PrevisaoAlertsProps) {
 
   if (primeiroMesNegativo) {
     type = 'danger';
-    const dataRef = new Date(primeiroMesNegativo.ano, primeiroMesNegativo.mes - 1);
+    const [ano, mes] = primeiroMesNegativo.mes.split("-").map(Number);
+    const dataRef = new Date(ano, mes - 1);
     title = `Alerta Crítico: Risco em ${format(dataRef, "MMMM", { locale: ptBR })}`;
     message = `Seu saldo final pode ficar negativo a partir de ${format(dataRef, "MMMM/yy", { locale: ptBR })}.`;
     Icon = AlertCircle;
