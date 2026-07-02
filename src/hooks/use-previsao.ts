@@ -1,14 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 
+export interface EstimativaPorCategoria {
+  categoriaId: number;
+  nome: string;
+  media: number;
+}
+
+export interface EstimativaVariavel {
+  valor: number;
+  minimo: number;
+  maximo: number;
+  mesesConsiderados: number;
+  porCategoria: EstimativaPorCategoria[];
+}
+
+export interface AjusteManual {
+  entrada: number;
+  saida: number;
+}
+
 export interface PrevisaoMesResponse {
-  mes: number;
-  ano: number;
+  mes: string;
   saldoInicial: number;
-  entradasPrevistas: number;
-  saidasPrevistas: number;
-  ajusteEntrada: number;
-  ajusteSaida: number;
+  receitasFixas: number;
+  despesasFixas: number;
+  estimativaVariavel: EstimativaVariavel;
+  ajusteManual: AjusteManual;
   saldoFinal: number;
 }
 
