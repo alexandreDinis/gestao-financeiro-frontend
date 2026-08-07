@@ -19,6 +19,9 @@ export interface Divida {
   id: number;
   pessoaId?: number;
   pessoaNome?: string;
+  categoriaId?: number;
+  categoriaNome?: string;
+  categoriaCor?: string;
   descricao: string;
   nomeDivida?: string;
   tipo: TipoDivida;
@@ -39,6 +42,7 @@ export interface Divida {
 
 export interface DividaRequest {
   pessoaId?: number;
+  categoriaId?: number;
   descricao: string;
   tipo: TipoDivida;
   valorTotal: number;
@@ -57,6 +61,7 @@ export interface PagarParcelaRequest {
   categoriaId?: number; 
   dataPagamento?: string; 
   valorPago?: number; 
+  descontarExcedenteDe?: 'PROXIMA' | 'ULTIMA';
 }
 
 export interface PagarMultiplasParcelasRequest {

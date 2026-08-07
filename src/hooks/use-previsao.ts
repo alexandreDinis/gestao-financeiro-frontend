@@ -20,12 +20,21 @@ export interface AjusteManual {
   saida: number;
 }
 
+export interface ItemPrevisaoDetalhamento {
+  descricao: string;
+  valor: number;
+  tipo: string;
+}
+
 export interface PrevisaoMesResponse {
   mes: string;
   saldoInicial: number;
   receitasFixas: number;
+  detalhamentoReceitasFixas?: ItemPrevisaoDetalhamento[];
   despesasFixas: number;
+  detalhamentoDespesasFixas?: ItemPrevisaoDetalhamento[];
   estimativaVariavel: EstimativaVariavel;
+  totalDespesasEstimadas?: number;
   ajusteManual: AjusteManual;
   saldoFinal: number;
 }

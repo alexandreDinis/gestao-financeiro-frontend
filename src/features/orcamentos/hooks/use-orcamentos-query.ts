@@ -22,3 +22,13 @@ export function useOrcamentosQuery(mes: number, ano: number) {
     enabled: !!user,
   });
 }
+
+export function useOrcamentosSugestaoQuery(mes: number, ano: number, mesesHistorico: number = 3, enabled: boolean = true) {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ["orcamentos-sugestao", user?.id, mes, ano, mesesHistorico],
+    queryFn: () => OrcamentosService.obterSugestoes(mes, ano, mesesHistorico),
+    enabled: !!user && enabled,
+  });
+}

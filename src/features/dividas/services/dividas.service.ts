@@ -27,6 +27,11 @@ export const DividasService = {
     return data.data;
   },
 
+  atualizar: async (id: number, request: DividaRequest): Promise<Divida> => {
+    const { data } = await api.put(`/dividas/${id}`, request);
+    return data.data;
+  },
+
   pagarParcela: async (parcelaId: number, request: PagarParcelaRequest): Promise<any> => {
     const { data } = await api.put(`/dividas/parcelas/${parcelaId}/pagar`, request);
     return data.data;
@@ -43,6 +48,11 @@ export const DividasService = {
 
   processarRecorrencias: async (): Promise<void> => {
     await api.post("/dividas/processar-recorrencias");
+  },
+
+  cancelarRecorrencia: async (id: number): Promise<Divida> => {
+    const { data } = await api.put(`/dividas/${id}/cancelar-recorrencia`);
+    return data.data;
   },
 
   exportarPdf: async (tipo?: TipoDivida, pessoaId?: number, ano?: number, mes?: number, status?: StatusDivida): Promise<void> => {

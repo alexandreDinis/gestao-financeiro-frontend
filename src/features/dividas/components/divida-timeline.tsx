@@ -10,10 +10,11 @@ interface DividaTimelineProps {
   parcelas: ParcelaDivida[];
   totalParcelas: number;
   dividaId: number;
+  isRecorrente?: boolean;
   onPagar?: (parcela: ParcelaDivida) => void;
 }
 
-export function DividaTimeline({ parcelas, totalParcelas, dividaId, onPagar }: DividaTimelineProps) {
+export function DividaTimeline({ parcelas, totalParcelas, dividaId, isRecorrente, onPagar }: DividaTimelineProps) {
   const [expanded, setExpanded] = useState(false);
 
   // Ordena parcelas por vencimento
@@ -51,11 +52,11 @@ export function DividaTimeline({ parcelas, totalParcelas, dividaId, onPagar }: D
           <div 
             key={p.id}
             className={cn(
-              "h-4 px-1 rounded border flex items-center justify-center text-[10px] min-w-[1rem]",
+              "h-4 px-1.5 rounded border flex items-center justify-center text-[10px] min-w-[1rem]",
               getStatusColor(p)
             )}
           >
-            {p.status === 'PAGO' ? <Check size={10} /> : `${p.numeroParcela}/${totalParcelas}`}
+            {p.status === 'PAGO' ? <Check size={10} /> : (isRecorrente ? `#${p.numeroParcela}` : `${p.numeroParcela}/${totalParcelas}`)}
           </div>
         ))}
         {expanded ? <ChevronUp size={14} className="text-muted-foreground ml-1" /> : <ChevronDown size={14} className="text-muted-foreground ml-1" />}
@@ -81,8 +82,6 @@ export function DividaTimeline({ parcelas, totalParcelas, dividaId, onPagar }: D
               statusText = `Vence em ${daysDiff} dias`;
             }
 
-            const isPending = false; // Progress handled by parent or mutation state if needed
-
             return (
               <div key={p.id} className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-3">
@@ -90,7 +89,9 @@ export function DividaTimeline({ parcelas, totalParcelas, dividaId, onPagar }: D
                      {p.status === 'PAGO' ? <Check size={12} /> : <Clock size={12} />}
                   </div>
                   <div>
-                    <div className="text-white font-medium">Parcela {p.numeroParcela}/{totalParcelas} - R$ {p.valor.toFixed(2)}</div>
+                    <div className="text-white font-medium">
+                      {isRecorrente ? `Cobrança Mês ${p.numeroParcela}` : `Parcela ${p.numeroParcela}/${totalParcelas}`} - R$ {p.valor.toFixed(2)}
+                    </div>
                     <div className={cn("text-xs", statusColor)}>{statusText}</div>
                   </div>
                 </div>

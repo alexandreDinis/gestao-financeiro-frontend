@@ -176,21 +176,6 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
           </SelectContent>
         </Select>
 
-        {/* Origem Filter */}
-        <Select
-          value={searchParams.get("origem") || "ALL"}
-          onValueChange={(val) => updateUrl("origem", val)}
-        >
-          <SelectTrigger className="w-[140px] bg-black/40 border-border/50 h-10">
-            <SelectValue placeholder="Origem" />
-          </SelectTrigger>
-          <SelectContent className="glass-panel border-border/40">
-            <SelectItem value="ALL">Todas Origens</SelectItem>
-            <SelectItem value="MANUAL">Manual</SelectItem>
-            <SelectItem value="AUTOMATICA">Automática</SelectItem>
-          </SelectContent>
-        </Select>
-
         {/* Conta Filter */}
         <div className="flex items-center gap-2">
           <Building size={16} className="text-muted-foreground hidden lg:block" />
@@ -204,7 +189,9 @@ export function TransacoesFilters({ currentFilters }: { currentFilters: any }) {
             <SelectContent className="glass-panel border-border/40">
               <SelectItem value="ALL">Todas as Contas</SelectItem>
               {contas?.map(conta => (
-                <SelectItem key={conta.id} value={String(conta.id)}>{conta.nome}</SelectItem>
+                <SelectItem key={conta.id} value={String(conta.id)}>
+                  {conta.tipo === "CARTAO_CREDITO" ? `💳 ${conta.nome}` : conta.nome}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

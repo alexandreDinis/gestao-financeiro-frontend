@@ -4,9 +4,10 @@ import { useOrcamentosResumoQuery } from "../hooks/use-orcamentos-query";
 import { useDeletarOrcamentoMutation } from "../hooks/use-orcamentos-mutation";
 import { OrcamentoResumoResponse } from "../types";
 import { OrcamentoFormDialog } from "./orcamento-form";
+import { GerarOrcamentoDialog } from "./gerar-orcamento-dialog";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { Target, Pencil, Trash2, ArrowRight } from "lucide-react";
+import { Target, Pencil, Trash2, ArrowRight, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface OrcamentosListProps {
@@ -19,6 +20,7 @@ export function OrcamentosList({ mes, ano }: OrcamentosListProps) {
   const deletarMutation = useDeletarOrcamentoMutation(mes, ano);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [gerarDialogOpen, setGerarDialogOpen] = useState(false);
   const [editingOrcamento, setEditingOrcamento] = useState<OrcamentoResumoResponse | undefined>();
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -86,13 +88,23 @@ export function OrcamentosList({ mes, ano }: OrcamentosListProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-xl font-bold text-white tracing-wide flex items-center gap-2">
           Detalhamento por Categoria
         </h2>
-        <Button onClick={handleCreateNew} className="bg-primary/80 hover:bg-primary text-black">
-          Nova Meta
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setGerarDialogOpen(true)}
+            variant="outline"
+            className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 font-bold flex items-center gap-2"
+          >
+            <Wand2 size={16} />
+            Gerar Orçamento Automático
+          </Button>
+          <Button onClick={handleCreateNew} className="bg-primary/80 hover:bg-primary text-black font-bold">
+            Nova Meta
+          </Button>
+        </div>
       </div>
 
       {orcamentos?.length === 0 ? (
@@ -226,6 +238,15 @@ export function OrcamentosList({ mes, ano }: OrcamentosListProps) {
            mesContexto={mes} 
            anoContexto={ano} 
          />
+      )}
+
+      {gerarDialogOpen && (
+        <GerarOrcamentoDialog
+          open={gerarDialogOpen}
+          onOpenChange={setGerarDialogOpen}
+          mes={mes}
+          ano={ano}
+        />
       )}
     </div>
   );

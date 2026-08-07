@@ -4,7 +4,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { TipoDivida } from "../types";
 import { useDividasQuery } from "../hooks/use-dividas-query";
-import { useDeletarDividaMutation, useProcessarRecorrenciasMutation } from "../hooks/use-dividas-mutation";
+import { useDeletarDividaMutation, useProcessarRecorrenciasMutation, useCancelarRecorrenciaMutation } from "../hooks/use-dividas-mutation";
 import { DividaTimeline } from "./divida-timeline";
 import { DividaFormDialog } from "./divida-form-dialog";
 import { PagarParcelaDialog } from "./pagar-parcela-dialog";
@@ -26,7 +26,8 @@ import {
   FileText,
   Layers,
   Wallet,
-  RefreshCw
+  RefreshCw,
+  Pencil
 } from "lucide-react";
 import { DividasService } from "../services/dividas.service";
 import {
@@ -54,7 +55,9 @@ export function DividasList({ tipo }: DividasListProps) {
 
   const deletarMutation = useDeletarDividaMutation();
   const processarRecorrenciasMutation = useProcessarRecorrenciasMutation();
+  const cancelarRecorrenciaMutation = useCancelarRecorrenciaMutation();
   const [formOpen, setFormOpen] = useState(false);
+  const [dividaToEdit, setDividaToEdit] = useState<Divida | null>(null);
 
   // States for new Sub-Dialogs
   const [pagarOpen, setPagarOpen] = useState(false);
@@ -162,7 +165,7 @@ export function DividasList({ tipo }: DividasListProps) {
             Gerar Extrato PDF
           </Button>
 
-          <Button onClick={() => setFormOpen(true)} className="bg-primary text-black hover:bg-primary/90">
+          <Button onClick={() => { setDividaToEdit(null); setFormOpen(true); }} className="bg-primary text-black hover:bg-primary/90">
             <PlusCircle className="mr-2 h-4 w-4" />
             Registrar Operação
           </Button>
@@ -235,8 +238,29 @@ export function DividasList({ tipo }: DividasListProps) {
                     <tr key={divida.id} className="border-b border-border/20 last:border-0 hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-medium text-white text-[15px]">{divida.pessoaNome}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                          {divida.descricao}
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span>{divida.descricao}</span>
+                          {divida.recorrente && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 bg-primary/20 text-primary border border-primary/30">
+                              <RefreshCw className="w-3 h-3 animate-spin-slow" />
+                              Recorrente Mensal
+                            </span>
+                          )}
+                          {divida.categoriaNome && (
+                            <span
+                              className="text-[10px] font-medium px-2 py-0.5 rounded-full inline-flex items-center gap-1 border border-white/10"
+                              style={{
+                                backgroundColor: divida.categoriaCor ? `${divida.categoriaCor}20` : '#3f3f4620',
+                                color: divida.categoriaCor || '#a1a1aa'
+                              }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: divida.categoriaCor || '#a1a1aa' }}
+                              />
+                              {divida.categoriaNome}
+                            </span>
+                          )}
                         </div>
                         {isFiltradoMes ? (
                            <div className="text-[10px] text-muted-foreground mt-1 px-1.5 py-0.5 bg-black/40 rounded w-fit">
@@ -253,6 +277,7 @@ export function DividasList({ tipo }: DividasListProps) {
                           parcelas={divida.parcelas} 
                           totalParcelas={divida.totalParcelas}
                           dividaId={divida.id} 
+                          isRecorrente={divida.recorrente}
                           onPagar={(p) => {
                             setSelectedParcela(p);
                             setPagarOpen(true);
@@ -261,11 +286,11 @@ export function DividasList({ tipo }: DividasListProps) {
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                          <div className={cn("text-lg", isReceber ? "text-green-500" : "text-white")}>
-                            {formatCurrency(isFiltradoMes ? valorNoMes : divida.valorTotal)}
+                            {formatCurrency(isFiltradoMes ? valorNoMes : (divida.recorrente ? (divida.valorParcelaRecorrente || divida.valorTotal) : divida.valorTotal))}
                          </div>
-                         {isFiltradoMes && (
-                           <div className="text-[10px] text-muted-foreground">Parcela do Extrato</div>
-                         )}
+                         <div className="text-[10px] text-muted-foreground">
+                            {isFiltradoMes ? "Parcela do Extrato" : (divida.recorrente ? "Valor por Mês" : "Valor Total")}
+                         </div>
                       </td>
                         <td className="px-4 py-3 text-right">
                           {isFiltradoMes ? (
@@ -285,9 +310,9 @@ export function DividasList({ tipo }: DividasListProps) {
                          ) : (
                            <>
                              <div className="font-bold text-white">
-                               {formatCurrency(divida.valorRestante)}
+                                {divida.recorrente ? formatCurrency(divida.valorParcelaRecorrente || divida.valorTotal) : formatCurrency(divida.valorRestante)}
                              </div>
-                             <div className="text-[10px] text-muted-foreground">{percentualPago.toFixed(0)}% pago</div>
+                             <div className="text-[10px] text-muted-foreground">{divida.recorrente ? "Mensal contínuo" : `${percentualPago.toFixed(0)}% pago`}</div>
                            </>
                          )}
                       </td>
@@ -328,12 +353,25 @@ export function DividasList({ tipo }: DividasListProps) {
                                ) : null;
                             })()}
                             <DropdownMenuItem className="cursor-pointer" onClick={() => {
+                              setDividaToEdit(divida);
+                              setFormOpen(true);
+                            }}>
+                              <Pencil className="mr-2 h-4 w-4 text-primary" />
+                              <span>{divida.recorrente ? 'Editar Recorrência / Valor' : 'Editar Dívida'}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => {
                               setSelectedDivida(divida);
                               setDetalhesOpen(true);
                             }}>
                               <Eye className="mr-2 h-4 w-4" />
                               <span>Ver Histórico e Detalhes</span>
                             </DropdownMenuItem>
+                            {divida.recorrente && (
+                              <DropdownMenuItem className="cursor-pointer text-amber-400 focus:text-amber-300" onClick={() => cancelarRecorrenciaMutation.mutate(divida.id)}>
+                                <RefreshCw className="mr-2 h-4 w-4 text-amber-400" />
+                                <span>Encerrar Recorrência</span>
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator className="bg-border/40" />
                             <DropdownMenuItem onClick={() => handleDelete(divida.id)} className="cursor-pointer text-destructive focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -353,8 +391,12 @@ export function DividasList({ tipo }: DividasListProps) {
 
       <DividaFormDialog 
         open={formOpen} 
-        onOpenChange={setFormOpen} 
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setDividaToEdit(null);
+        }} 
         tipoDefault={tipo}
+        dividaToEdit={dividaToEdit}
       />
 
       <PagarParcelaDialog

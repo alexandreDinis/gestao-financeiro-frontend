@@ -1,5 +1,11 @@
 import { api } from "@/lib/axios";
-import { OrcamentoResponse, OrcamentoResumoResponse, OrcamentoRequest } from "../types";
+import { 
+  OrcamentoResponse, 
+  OrcamentoResumoResponse, 
+  OrcamentoRequest,
+  OrcamentoSugestaoResponse,
+  GerarOrcamentoLoteRequest 
+} from "../types";
 
 export const OrcamentosService = {
   listar: async (mes: number, ano: number) => {
@@ -13,6 +19,18 @@ export const OrcamentosService = {
     const { data } = await api.get<{ data: OrcamentoResumoResponse[] }>("/orcamentos/resumo", {
       params: { mes, ano }
     });
+    return data.data;
+  },
+
+  obterSugestoes: async (mes: number, ano: number, mesesHistorico: number = 3) => {
+    const { data } = await api.get<{ data: OrcamentoSugestaoResponse[] }>("/orcamentos/sugestao", {
+      params: { mes, ano, mesesHistorico }
+    });
+    return data.data;
+  },
+
+  salvarLote: async (request: GerarOrcamentoLoteRequest) => {
+    const { data } = await api.post<{ data: OrcamentoResponse[] }>("/orcamentos/lote", request);
     return data.data;
   },
 
