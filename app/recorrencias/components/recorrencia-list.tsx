@@ -55,9 +55,12 @@ export function RecorrenciaList({ onEdit }: RecorrenciaListProps) {
 
   const { data: categoriasData } = useQuery<any>({
     queryKey: ["categorias"],
-    queryFn: () => api.get("/categorias").then(res => res.data)
+    queryFn: async () => {
+      const { data } = await api.get("/categorias");
+      return data.data;
+    }
   });
-  const categorias = categoriasData?.data || [];
+  const categorias = Array.isArray(categoriasData) ? categoriasData : [];
 
   const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set());
 

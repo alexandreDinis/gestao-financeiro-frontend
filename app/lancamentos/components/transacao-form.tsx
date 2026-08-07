@@ -130,9 +130,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
 
   const { data: fetchCartoes } = useCartoesQuery();
 
-  const contas = fetchContas || [];
-  const categorias = fetchCategorias || [];
-  const cartoes = fetchCartoes || [];
+  const contas = Array.isArray(fetchContas) ? fetchContas : [];
+  const categorias = Array.isArray(fetchCategorias) ? fetchCategorias : [];
+  const cartoes = Array.isArray(fetchCartoes) ? fetchCartoes : [];
 
   // 3. React Hook Form
   const {
