@@ -61,6 +61,7 @@ export interface PagarParcelaRequest {
   categoriaId?: number; 
   dataPagamento?: string; 
   valorPago?: number; 
+  descontarExcedenteDe?: 'PROXIMA' | 'ULTIMA';
 }
 
 export interface PagarMultiplasParcelasRequest {

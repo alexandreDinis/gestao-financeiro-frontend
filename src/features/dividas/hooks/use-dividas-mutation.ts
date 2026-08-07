@@ -60,34 +60,57 @@ export function usePagarParcelaMutation() {
       await queryClient.cancelQueries(queryFilter);
 
       // 2. Snapshot the previous value
-      const previousDividasBatches = queryClient.getQueriesData<Divida[]>(queryFilter);
+      const previousDividasBatches = queryClient.getQueriesData<any>(queryFilter);
 
-      // 3. Optimistically update all cached dividas arrays that contain this parcela
-      queryClient.setQueriesData<Divida[]>(queryFilter, (oldData) => {
-        if (!oldData) return [];
-        return oldData.map(divida => {
-          // Check if this divida has the parcela
-          const hasParcela = divida.parcelas.some(p => p.id === parcelaId);
-          if (!hasParcela) return divida;
+      // 3. Optimistically update all cached dividas structures that contain this parcela
+      queryClient.setQueriesData<any>(queryFilter, (oldData: any) => {
+        if (!oldData) return oldData;
 
-          // Clone and update the specific parcela
+        // Se a query retornar o resumo { items: [...], totalGeral: ... }
+        if (oldData.items && Array.isArray(oldData.items)) {
           return {
-            ...divida,
-            parcelas: divida.parcelas.map(p => 
-              p.id === parcelaId 
-                ? { ...p, status: 'PAGO', dataPagamento: new Date().toISOString() } 
-                : p
-            )
-            // Ideally we'd also recalculate valorRestante here, but the server invalidation will fix it shortly
+            ...oldData,
+            items: oldData.items.map((divida: Divida) => {
+              const hasParcela = divida.parcelas?.some(p => p.id === parcelaId);
+              if (!hasParcela) return divida;
+
+              return {
+                ...divida,
+                parcelas: divida.parcelas.map(p => 
+                  p.id === parcelaId 
+                    ? { ...p, status: 'PAGO', dataPagamento: new Date().toISOString() } 
+                    : p
+                )
+              };
+            })
           };
-        });
+        }
+
+        // Se for um array direto de dividas
+        if (Array.isArray(oldData)) {
+          return oldData.map((divida: Divida) => {
+            const hasParcela = divida.parcelas?.some(p => p.id === parcelaId);
+            if (!hasParcela) return divida;
+
+            return {
+              ...divida,
+              parcelas: divida.parcelas.map(p => 
+                p.id === parcelaId 
+                  ? { ...p, status: 'PAGO', dataPagamento: new Date().toISOString() } 
+                  : p
+              )
+            };
+          });
+        }
+
+        return oldData;
       });
 
       return { previousDividasBatches };
     },
-    onError: (err, variables, context) => {
+    onError: (err: any, variables, context) => {
       // Revert if error
-      toast.error("Erro no Pagamento", "Não foi possível processar a parcela.");
+      toast.error("Erro no Pagamento", err?.response?.data?.message || err?.message || "Não foi possível processar a parcela.");
       if (context?.previousDividasBatches) {
         context.previousDividasBatches.forEach(([queryKey, data]) => {
            queryClient.setQueryData(queryKey, data);
@@ -101,8 +124,10 @@ export function usePagarParcelaMutation() {
       // Final sync to ensure everything including balances and scores are 100% correct
       queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] }); 
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }); // Optional: Multi-invalidation 
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }); 
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["previsao-caixa"] });
+      queryClient.invalidateQueries({ queryKey: ["contas"] });
     },
   });
 }
