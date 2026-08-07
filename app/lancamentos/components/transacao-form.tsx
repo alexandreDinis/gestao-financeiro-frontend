@@ -6,7 +6,7 @@ import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import { NumericFormat } from "react-number-format";
-import { useCreateTransacao, useCreateTransacaoRecorrente, useUpdateTransacao } from "@/hooks/use-transacoes";
+import { useCreateTransacao, useCreateTransacaoRecorrente, useUpdateTransacao, useUltimaTransacao } from "@/hooks/use-transacoes";
 import { useUpdateRecorrencia } from "@/hooks/use-recorrencias";
 import { useCartoesQuery } from "@/features/cartoes/hooks/use-cartoes-query";
 import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
@@ -14,7 +14,7 @@ import { useCriarDividaMutation } from "@/features/dividas/hooks/use-dividas-mut
 import { DividaRequest } from "@/features/dividas/types";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 
 import { TipoTransacao, TipoConta, Conta, Categoria, ApiResponse, TipoCategoria } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search, Plus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search, Plus, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { CategoriaFormDialog } from "../../categorias/components/categoria-form-dialog";
@@ -130,9 +130,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
 
   const { data: fetchCartoes } = useCartoesQuery();
 
-  const contas = fetchContas || [];
-  const categorias = fetchCategorias || [];
-  const cartoes = fetchCartoes || [];
+  const contas = Array.isArray(fetchContas) ? fetchContas : [];
+  const categorias = Array.isArray(fetchCategorias) ? fetchCategorias : [];
+  const cartoes = Array.isArray(fetchCartoes) ? fetchCartoes : [];
 
   // 3. React Hook Form
   const {
@@ -215,6 +215,10 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
 
   const tipoSelecionado = watch("tipo");
   const contaOrigemSelecionada = watch("contaOrigemId");
+  const { data: ultimaTransacao } = useUltimaTransacao({
+    contaId: contaOrigemSelecionada || undefined,
+    tipo: tipoSelecionado as any
+  });
   const watchValor = watch("valor");
   const watchData = watch("data");
   const isRecorrente = watch("isRecorrente");
@@ -348,6 +352,19 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
     <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-4">
       
+      {/* Last Transaction Indicator Banner */}
+      {ultimaTransacao && !initialData?.id && (
+        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
+          <div className="flex items-center gap-2">
+            <History size={14} className="text-primary shrink-0" />
+            <span>
+              Últim{tipoSelecionado === "RECEITA" ? "a entrada" : tipoSelecionado === "DESPESA" ? "a saída" : "o lançamento"} no extrato: <strong className="text-white">{ultimaTransacao.descricao}</strong> em{" "}
+              <strong className="text-white">{format(parseISO(ultimaTransacao.data), "dd/MM/yyyy")}</strong>
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Type Selector */}
       <div className="grid grid-cols-3 gap-2">
          {[TipoTransacao.DESPESA, TipoTransacao.RECEITA, TipoTransacao.TRANSFERENCIA].map((t) => (

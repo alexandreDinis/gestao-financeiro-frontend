@@ -21,6 +21,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -69,6 +70,7 @@ export default function ContasVencimentoPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVencimento, setSelectedVencimento] = useState<Vencimento | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [selectedPagarIds, setSelectedPagarIds] = useState<string[]>([]);
 
   const { data: vencimentos, isLoading } = useQuery<Vencimento[]>({
     queryKey: ["vencimentos-todos", mes, ano],
@@ -91,6 +93,7 @@ export default function ContasVencimentoPage() {
   };
 
   const nextMonth = () => {
+    setSelectedPagarIds([]);
     if (mes === 12) {
       setMes(1);
       setAno(ano + 1);
@@ -100,6 +103,7 @@ export default function ContasVencimentoPage() {
   };
 
   const prevMonth = () => {
+    setSelectedPagarIds([]);
     if (mes === 1) {
       setMes(12);
       setAno(ano - 1);
@@ -116,11 +120,43 @@ export default function ContasVencimentoPage() {
   const contasAPagar = filteredVencimentos.filter(v => v.tipo === "DESPESA");
   const contasAReceber = filteredVencimentos.filter(v => v.tipo === "RECEITA");
 
-  const renderTable = (list: Vencimento[], emptyMessage: string) => (
+  const selectedContasAPagar = contasAPagar.filter(v => selectedPagarIds.includes(v.idUnico));
+  const isAnyPagarSelected = selectedContasAPagar.length > 0;
+
+  const totalPagarCalculado = isAnyPagarSelected
+    ? selectedContasAPagar.reduce((acc, v) => acc + v.valor, 0)
+    : contasAPagar.reduce((acc, v) => acc + v.valor, 0);
+
+  const allPagarSelected = contasAPagar.length > 0 && selectedContasAPagar.length === contasAPagar.length;
+
+  const toggleSelectAllPagar = () => {
+    if (allPagarSelected) {
+      setSelectedPagarIds([]);
+    } else {
+      setSelectedPagarIds(contasAPagar.map(v => v.idUnico));
+    }
+  };
+
+  const toggleSelectPagar = (idUnico: string) => {
+    setSelectedPagarIds(prev =>
+      prev.includes(idUnico) ? prev.filter(id => id !== idUnico) : [...prev, idUnico]
+    );
+  };
+
+  const renderTable = (list: Vencimento[], emptyMessage: string, isPagar: boolean = false) => (
     <div className="glass-panel rounded-lg overflow-hidden border-border/40">
       <Table>
         <TableHeader>
           <TableRow className="border-border/40 hover:bg-transparent">
+            {isPagar && (
+              <TableHead className="w-[45px] text-center pl-4 pr-0">
+                <Checkbox
+                  checked={allPagarSelected}
+                  onCheckedChange={toggleSelectAllPagar}
+                  aria-label="Selecionar todas as contas a pagar"
+                />
+              </TableHead>
+            )}
             <TableHead className="text-muted-foreground w-[120px]">Vencimento</TableHead>
             <TableHead className="text-muted-foreground">Descrição</TableHead>
             <TableHead className="text-muted-foreground">Origem / Conta</TableHead>
@@ -132,7 +168,7 @@ export default function ContasVencimentoPage() {
         <TableBody>
           {list.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+              <TableCell colSpan={isPagar ? 7 : 6} className="text-center py-12 text-muted-foreground">
                 <div className="flex flex-col items-center gap-2">
                   <Calendar size={32} className="opacity-20" />
                   <p>{emptyMessage}</p>
@@ -140,50 +176,67 @@ export default function ContasVencimentoPage() {
               </TableCell>
             </TableRow>
           ) : (
-            list.map((v) => (
-              <TableRow key={v.idUnico} className="border-border/20 hover:bg-white/5 transition-colors">
-                <TableCell className="text-white font-medium">
-                  {formatDate(v.dataVencimento)}
-                </TableCell>
-                <TableCell className="text-white font-semibold">
-                  {v.descricao}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-xs">
-                  <div className="flex flex-col">
-                    <span className="font-medium text-primary/80 uppercase tracking-tighter text-[10px]">{v.origem}</span>
-                    <span>{v.conta}</span>
-                  </div>
-                </TableCell>
-                <TableCell className={`text-right font-bold ${v.tipo === "RECEITA" ? "text-green-400" : "text-white"}`}>
-                  {v.tipo === "RECEITA" ? "+" : ""}{formatCurrency(v.valor)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {v.atrasado ? (
-                    <Badge variant="destructive" className="bg-red-500/20 text-red-400 border-red-500/30 flex items-center gap-1 mx-auto w-fit">
-                      <AlertCircle size={10} /> Atrasado
-                    </Badge>
-                  ) : v.venceHoje ? (
-                    <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 flex items-center gap-1 mx-auto w-fit">
-                      <Clock size={10} /> Vence Hoje
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground border-border/50 flex items-center gap-1 mx-auto w-fit">
-                      <Calendar size={10} /> Em dia
-                    </Badge>
+            list.map((v) => {
+              const isSelected = isPagar && selectedPagarIds.includes(v.idUnico);
+              return (
+                <TableRow 
+                  key={v.idUnico} 
+                  className={`border-border/20 transition-colors ${
+                    isSelected ? "bg-red-500/10 hover:bg-red-500/15" : "hover:bg-white/5"
+                  }`}
+                >
+                  {isPagar && (
+                    <TableCell className="w-[45px] text-center pl-4 pr-0">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectPagar(v.idUnico)}
+                        aria-label={`Selecionar ${v.descricao}`}
+                      />
+                    </TableCell>
                   )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="sm"
-                    onClick={() => handlePagar(v)}
-                    className="bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/40 h-8 gap-1"
-                  >
-                    <CheckCircle size={14} />
-                    {v.tipo === "RECEITA" ? "Receber" : "Pagar"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
+                  <TableCell className="text-white font-medium">
+                    {formatDate(v.dataVencimento)}
+                  </TableCell>
+                  <TableCell className="text-white font-semibold">
+                    {v.descricao}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-primary/80 uppercase tracking-tighter text-[10px]">{v.origem}</span>
+                      <span>{v.conta}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right font-bold ${v.tipo === "RECEITA" ? "text-green-400" : "text-white"}`}>
+                    {v.tipo === "RECEITA" ? "+" : ""}{formatCurrency(v.valor)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {v.atrasado ? (
+                      <Badge variant="destructive" className="bg-red-500/20 text-red-400 border-red-500/30 flex items-center gap-1 mx-auto w-fit">
+                        <AlertCircle size={10} /> Atrasado
+                      </Badge>
+                    ) : v.venceHoje ? (
+                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 flex items-center gap-1 mx-auto w-fit">
+                        <Clock size={10} /> Vence Hoje
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground border-border/50 flex items-center gap-1 mx-auto w-fit">
+                        <Calendar size={10} /> Em dia
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      onClick={() => handlePagar(v)}
+                      className="bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/40 h-8 gap-1"
+                    >
+                      <CheckCircle size={14} />
+                      {v.tipo === "RECEITA" ? "Receber" : "Pagar"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -207,7 +260,15 @@ export default function ContasVencimentoPage() {
               <ChevronLeft size={18} />
             </Button>
             
-            <Select value={mes.toString()} onValueChange={(val) => val && setMes(parseInt(val))}>
+            <Select 
+              value={mes.toString()} 
+              onValueChange={(val) => {
+                if (val) {
+                  setSelectedPagarIds([]);
+                  setMes(parseInt(val));
+                }
+              }}
+            >
               <SelectTrigger className="w-[130px] bg-transparent border-none focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
@@ -218,7 +279,15 @@ export default function ContasVencimentoPage() {
               </SelectContent>
             </Select>
 
-            <Select value={ano.toString()} onValueChange={(val) => val && setAno(parseInt(val))}>
+            <Select 
+              value={ano.toString()} 
+              onValueChange={(val) => {
+                if (val) {
+                  setSelectedPagarIds([]);
+                  setAno(parseInt(val));
+                }
+              }}
+            >
               <SelectTrigger className="w-[90px] bg-transparent border-none focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
@@ -246,6 +315,7 @@ export default function ContasVencimentoPage() {
                 {formatCurrency(filteredVencimentos.filter(v => v.atrasado).reduce((acc, v) => acc + v.valor, 0))}
               </p>
             </div>
+
             <div className="glass-panel p-4 rounded-xl border border-yellow-500/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/5 rounded-full -translate-y-4 translate-x-4" />
               <p className="text-[10px] text-yellow-400 uppercase tracking-widest font-semibold mb-1">Vence Hoje</p>
@@ -254,14 +324,35 @@ export default function ContasVencimentoPage() {
                 {formatCurrency(filteredVencimentos.filter(v => v.venceHoje).reduce((acc, v) => acc + v.valor, 0))}
               </p>
             </div>
-            <div className="glass-panel p-4 rounded-xl border border-red-500/10 relative overflow-hidden">
+
+            <div className={`glass-panel p-4 rounded-xl border relative overflow-hidden transition-colors ${
+              isAnyPagarSelected ? "border-red-500/50 bg-red-500/5" : "border-red-500/10"
+            }`}>
               <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full -translate-y-4 translate-x-4" />
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1">Total a Pagar</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1">
+                  Total a Pagar
+                </p>
+                {isAnyPagarSelected && (
+                  <button
+                    onClick={() => setSelectedPagarIds([])}
+                    className="text-[10px] text-red-400 hover:underline font-semibold"
+                    title="Limpar seleção"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
               <p className="text-2xl font-black text-red-400">
-                {formatCurrency(contasAPagar.reduce((acc, v) => acc + v.valor, 0))}
+                {formatCurrency(totalPagarCalculado)}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{contasAPagar.length} compromisso(s)</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {isAnyPagarSelected
+                  ? `${selectedContasAPagar.length} de ${contasAPagar.length} selecionada(s)`
+                  : `${contasAPagar.length} compromisso(s)`}
+              </p>
             </div>
+
             <div className="glass-panel p-4 rounded-xl border border-green-500/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-full -translate-y-4 translate-x-4" />
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1">Total a Receber</p>
@@ -300,13 +391,13 @@ export default function ContasVencimentoPage() {
           <TabsContent value="pagar" className="mt-4">
              {isLoading ? (
                 <div className="py-20 text-center text-muted-foreground">Carregando compromissos...</div>
-             ) : renderTable(contasAPagar, "Nenhuma conta a pagar encontrada para este mês.")}
+             ) : renderTable(contasAPagar, "Nenhuma conta a pagar encontrada para este mês.", true)}
           </TabsContent>
           
           <TabsContent value="receber" className="mt-4">
              {isLoading ? (
                 <div className="py-20 text-center text-muted-foreground">Carregando compromissos...</div>
-             ) : renderTable(contasAReceber, "Nenhuma conta a receber encontrada para este mês.")}
+             ) : renderTable(contasAReceber, "Nenhuma conta a receber encontrada para este mês.", false)}
           </TabsContent>
         </Tabs>
       </div>

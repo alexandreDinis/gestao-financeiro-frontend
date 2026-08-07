@@ -128,6 +128,21 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
               </div>
             </th>
             <th className="px-4 py-3">
+              <div className="flex items-center gap-1.5 font-semibold text-rose-500">
+                Total Estimado
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[220px] text-xs">
+                      Soma das Despesas Fixas com a Estimativa Variável do mês
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </th>
+            <th className="px-4 py-3">
               <div className="flex items-center gap-1.5">
                 Ajuste Manual
                 <TooltipProvider>
@@ -159,10 +174,68 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
                 <td className="px-4 py-3 font-medium capitalize">{mesFormatado}</td>
                 <td className="px-4 py-3 text-muted-foreground">{formatCurrency(m.saldoInicial)}</td>
                 <td className="px-4 py-3">
-                  <span className="text-emerald-500">+{formatCurrency(m.receitasFixas)}</span>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-emerald-500 border-b border-dashed border-emerald-500/30 cursor-help">
+                          +{formatCurrency(m.receitasFixas)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="w-[280px] p-0" sideOffset={8}>
+                        <div className="px-4 py-3 border-b border-border/50 bg-emerald-500/5">
+                          <p className="font-semibold text-sm text-emerald-500">Receitas Fixas</p>
+                          <p className="text-xs text-muted-foreground">Itens programados do mês</p>
+                        </div>
+                        <div className="max-h-[200px] overflow-y-auto p-2">
+                          <div className="space-y-1">
+                            {m.detalhamentoReceitasFixas?.map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-xs p-1.5 hover:bg-muted/50 rounded-md">
+                                <span className="truncate max-w-[170px]">{item.descricao}</span>
+                                <span className="font-medium text-emerald-500">+{formatCurrency(item.valor)}</span>
+                              </div>
+                            ))}
+                            {(!m.detalhamentoReceitasFixas || m.detalhamentoReceitasFixas.length === 0) && (
+                              <div className="text-xs text-center text-muted-foreground py-2">
+                                Sem receitas fixas no mês
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-rose-500">-{formatCurrency(m.despesasFixas)}</span>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-rose-500 border-b border-dashed border-rose-500/30 cursor-help">
+                          -{formatCurrency(m.despesasFixas)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="w-[290px] p-0" sideOffset={8}>
+                        <div className="px-4 py-3 border-b border-border/50 bg-rose-500/5">
+                          <p className="font-semibold text-sm text-rose-500">Despesas Fixas</p>
+                          <p className="text-xs text-muted-foreground">Faturas e parcelas programadas do mês</p>
+                        </div>
+                        <div className="max-h-[200px] overflow-y-auto p-2">
+                          <div className="space-y-1">
+                            {m.detalhamentoDespesasFixas?.map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-xs p-1.5 hover:bg-muted/50 rounded-md">
+                                <span className="truncate max-w-[180px]">{item.descricao}</span>
+                                <span className="font-medium text-rose-500">-{formatCurrency(item.valor)}</span>
+                              </div>
+                            ))}
+                            {(!m.detalhamentoDespesasFixas || m.detalhamentoDespesasFixas.length === 0) && (
+                              <div className="text-xs text-center text-muted-foreground py-2">
+                                Sem despesas fixas no mês
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </td>
                 <td className="px-4 py-3">
                   <TooltipProvider delayDuration={100}>
@@ -195,6 +268,9 @@ export default function PrevisaoTable({ meses }: PrevisaoTableProps) {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                </td>
+                <td className="px-4 py-3 font-semibold text-rose-500 bg-rose-500/5">
+                  -{formatCurrency(m.totalDespesasEstimadas ?? (m.despesasFixas + m.estimativaVariavel.valor))}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-2">

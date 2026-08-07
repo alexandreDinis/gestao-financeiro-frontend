@@ -29,3 +29,23 @@ export interface OrcamentoRequest {
   ano: number;
   limite: number;
 }
+
+export interface OrcamentoSugestaoResponse {
+  categoriaId: number;
+  categoriaNome: string;
+  categoriaCor: string;
+  mediaHistorica: number;
+  limiteAtual: number | null;
+  limiteSugerido: number;
+}
+
+export interface OrcamentoItemLoteRequest {
+  categoriaId: number;
+  limite: number;
+}
+
+export interface GerarOrcamentoLoteRequest {
+  mes: number;
+  ano: number;
+  orcamentos: OrcamentoItemLoteRequest[];
+}

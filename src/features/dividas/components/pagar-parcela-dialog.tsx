@@ -44,6 +44,7 @@ const pagarSchema = z.object({
   contaId: z.number().min(1, "Selecione uma conta"),
   valorPago: z.number().positive("O valor deve ser maior que zero"),
   dataPagamento: z.string().nonempty("Data é obrigatória"),
+  descontarExcedenteDe: z.enum(["PROXIMA", "ULTIMA"]).optional(),
 });
 
 type PagarFormValues = z.infer<typeof pagarSchema>;
@@ -63,6 +64,7 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
     resolver: zodResolver(pagarSchema) as any,
     defaultValues: {
       dataPagamento: new Date().toISOString().split("T")[0],
+      descontarExcedenteDe: "PROXIMA",
     }
   });
 
@@ -91,7 +93,8 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
       request: {
         contaId: data.contaId,
         valorPago: data.valorPago,
-        dataPagamento: data.dataPagamento
+        dataPagamento: data.dataPagamento,
+        descontarExcedenteDe: data.valorPago > parcela.valor ? (data.descontarExcedenteDe || "PROXIMA") : undefined,
       }
     });
     
@@ -100,6 +103,7 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
   };
 
   const isPartial = parcela && valorPagoWatch && valorPagoWatch < parcela.valor;
+  const isSurplus = parcela && valorPagoWatch && valorPagoWatch > parcela.valor;
 
   if (!parcela) return null;
 
@@ -152,6 +156,53 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
                 <AlertCircle size={12} />
                 Pagamento parcial detectado. O restante (R$ {(parcela.valor - valorPagoWatch).toFixed(2).replace('.', ',')}) continuará pendente.
               </p>
+            )}
+
+            {isSurplus && (
+              <div className="bg-primary/10 border border-primary/30 p-3 rounded-lg space-y-2 animate-in fade-in duration-200 mt-2">
+                <p className="text-xs text-primary font-semibold flex items-center gap-1.5">
+                  <AlertCircle size={14} />
+                  Pagamento a maior detectado (Excedente: R$ {(valorPagoWatch - parcela.valor).toFixed(2).replace('.', ',')})
+                </p>
+                <Label className="text-xs text-muted-foreground">Onde deseja descontar o valor excedente?</Label>
+                <Controller
+                  name="descontarExcedenteDe"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button
+                        type="button"
+                        className={`p-2 text-xs rounded-lg border text-left transition-all ${
+                          field.value === "PROXIMA" || !field.value
+                            ? "border-primary bg-primary/20 text-white font-medium shadow-sm"
+                            : "border-border/40 bg-black/20 text-muted-foreground hover:bg-black/30"
+                        }`}
+                        onClick={() => field.onChange("PROXIMA")}
+                      >
+                        <div className="font-bold flex items-center gap-1">
+                          <span>⏭️ Próxima Parcela</span>
+                        </div>
+                        <span className="block text-[10px] text-muted-foreground mt-0.5 font-normal">Desconta da parcela seguinte</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`p-2 text-xs rounded-lg border text-left transition-all ${
+                          field.value === "ULTIMA"
+                            ? "border-primary bg-primary/20 text-white font-medium shadow-sm"
+                            : "border-border/40 bg-black/20 text-muted-foreground hover:bg-black/30"
+                        }`}
+                        onClick={() => field.onChange("ULTIMA")}
+                      >
+                        <div className="font-bold flex items-center gap-1">
+                          <span>⏮️ Última Parcela</span>
+                        </div>
+                        <span className="block text-[10px] text-muted-foreground mt-0.5 font-normal">Desconta da última parcela</span>
+                      </button>
+                    </div>
+                  )}
+                />
+              </div>
             )}
           </div>
 

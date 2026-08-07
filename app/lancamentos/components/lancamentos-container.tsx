@@ -8,6 +8,7 @@ import { Plus, ArrowLeftRight } from "lucide-react";
 import { TransacoesFilters } from "./transacoes-filters";
 import { TransacoesTable } from "./transacoes-table";
 import { TransacaoFormDialog } from "./transacao-form-dialog";
+import { UltimaTransacaoCard } from "./ultima-transacao-card";
 
 export function LancamentosContainer() {
   const searchParams = useSearchParams();
@@ -16,6 +17,12 @@ export function LancamentosContainer() {
 
   const handleOpenForm = () => {
     setEditingTransacao(null);
+    setIsFormOpen(true);
+  };
+
+  const handleOpenFormFromDate = (dateStr: string, tipo?: "RECEITA" | "DESPESA") => {
+    // Open creation modal with initial date pre-selected and type set
+    setEditingTransacao({ data: dateStr, tipo });
     setIsFormOpen(true);
   };
 
@@ -75,6 +82,11 @@ export function LancamentosContainer() {
           </Button>
         </div>
       </div>
+
+      <UltimaTransacaoCard 
+        contaId={filters.contaId} 
+        onNewTransactionFromDate={handleOpenFormFromDate} 
+      />
 
       <TransacoesFilters currentFilters={filters} />
       

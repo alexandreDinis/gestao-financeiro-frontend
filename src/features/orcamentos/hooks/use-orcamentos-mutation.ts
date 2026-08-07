@@ -1,8 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrcamentosService } from "../services/orcamentos.service";
-import { OrcamentoRequest } from "../types";
+import { OrcamentoRequest, GerarOrcamentoLoteRequest } from "../types";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+
+export function useSalvarLoteOrcamentosMutation(mes: number, ano: number) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: (request: GerarOrcamentoLoteRequest) => OrcamentosService.salvarLote(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orcamentos-resumo", user?.id, mes, ano] });
+      queryClient.invalidateQueries({ queryKey: ["orcamentos", user?.id, mes, ano] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      toast.success("Orçamento gerado e salvo com sucesso!");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Erro ao gerar orçamento em lote";
+      toast.error(msg);
+    }
+  });
+}
 
 export function useCriarOrcamentoMutation() {
   const queryClient = useQueryClient();

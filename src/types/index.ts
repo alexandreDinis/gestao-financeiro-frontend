@@ -19,6 +19,21 @@ export interface ApiResponse<T> {
   errors?: ApiError[];
 }
 
+export interface UltimaTransacaoResponse {
+  id: number;
+  descricao: string;
+  valor: number;
+  tipo: "RECEITA" | "DESPESA" | "TRANSFERENCIA";
+  status: string;
+  data: string;
+  createdAt: string;
+  contaId?: number;
+  contaNome?: string;
+  categoriaId?: number;
+  categoriaNome?: string;
+  categoriaCor?: string;
+}
+
 // ===== Enums =====
 export enum TipoConta {
   CORRENTE = "CORRENTE",
@@ -398,5 +413,14 @@ export interface RelatorioGastosMensais {
   mes: number;
   ano: number;
   totalGeral: number;
+  categorias: CategoriaRelatorio[];
+}
+
+export interface RelatorioReceitasMensais {
+  mes: number;
+  ano: number;
+  totalMes: number;
+  totalAno: number;
+  mediaMensal: number;
   categorias: CategoriaRelatorio[];
 }
