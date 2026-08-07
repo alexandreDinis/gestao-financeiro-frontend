@@ -400,3 +400,12 @@ export interface RelatorioGastosMensais {
   totalGeral: number;
   categorias: CategoriaRelatorio[];
 }
+
+export interface RelatorioReceitasMensais {
+  mes: number;
+  ano: number;
+  totalMes: number;
+  totalAno: number;
+  mediaMensal: number;
+  categorias: CategoriaRelatorio[];
+}
