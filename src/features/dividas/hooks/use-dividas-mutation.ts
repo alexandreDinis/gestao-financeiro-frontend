@@ -17,9 +17,32 @@ export function useCriarDividaMutation() {
       queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
       queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] }); // Updates score
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios-gastos-mensais"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios-receitas-mensais"] });
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível registrar a dívida.");
+    }
+  });
+}
+
+export function useAtualizarDividaMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, request }: { id: number; request: import("../types").DividaRequest }) =>
+      DividasService.atualizar(id, request),
+    onSuccess: () => {
+      toast.success("Dívida Atualizada", "As alterações foram salvas com sucesso.");
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios-gastos-mensais"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios-receitas-mensais"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível atualizar a dívida.");
     }
   });
 }
@@ -137,6 +160,23 @@ export function useProcessarRecorrenciasMutation() {
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível processar as recorrências.");
+    }
+  });
+}
+
+export function useCancelarRecorrenciaMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: DividasService.cancelarRecorrencia,
+    onSuccess: () => {
+      toast.success("Recorrência Encerrada", "A cobrança recorrente foi encerrada com sucesso.");
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível encerrar a recorrência.");
     }
   });
 }
