@@ -6,7 +6,8 @@ import type {
   ApiResponse, 
   TransacaoResponse, 
   TransacaoRequest,
-  LancamentoResponse
+  LancamentoResponse,
+  UltimaTransacaoResponse
 } from "@/types";
 
 /**
@@ -64,6 +65,25 @@ export function useTransacoes(filters: TransacoesFilters) {
   });
 }
 
+export function useUltimaTransacao(filters?: { contaId?: number; tipo?: "RECEITA" | "DESPESA" | "TRANSFERENCIA" }) {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId || "unknown_tenant";
+  const contaId = filters?.contaId;
+  const tipo = filters?.tipo;
+
+  return useQuery({
+    queryKey: ["ultima-transacao", tenantId, contaId, tipo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (contaId) params.append("contaId", contaId.toString());
+      if (tipo) params.append("tipo", tipo);
+      const { data } = await api.get<ApiResponse<UltimaTransacaoResponse>>(`/transacoes/ultima?${params.toString()}`);
+      return data.data;
+    },
+    enabled: !!user,
+  });
+}
+
 // 2. Mutations (General CRUD)
 export function useCreateTransacao() {
   const queryClient = useQueryClient();
@@ -75,6 +95,7 @@ export function useCreateTransacao() {
       toast.success("Transação criada", "Lançamento adicionado com sucesso.");
       // Invalidate the entire transacoes scope for this tenant to force refetch
       queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["ultima-transacao"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
     onError: () => {

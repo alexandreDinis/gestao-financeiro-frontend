@@ -19,6 +19,21 @@ export interface ApiResponse<T> {
   errors?: ApiError[];
 }
 
+export interface UltimaTransacaoResponse {
+  id: number;
+  descricao: string;
+  valor: number;
+  tipo: "RECEITA" | "DESPESA" | "TRANSFERENCIA";
+  status: string;
+  data: string;
+  createdAt: string;
+  contaId?: number;
+  contaNome?: string;
+  categoriaId?: number;
+  categoriaNome?: string;
+  categoriaCor?: string;
+}
+
 // ===== Enums =====
 export enum TipoConta {
   CORRENTE = "CORRENTE",
