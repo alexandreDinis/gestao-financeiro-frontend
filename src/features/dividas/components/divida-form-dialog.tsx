@@ -206,7 +206,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
       tipo: values.tipo,
       valorTotal: values.valorTotal,
       dataInicio: values.dataInicio,
-      dataFim: values.dataFim || undefined,
+      dataFim: values.dataFim || null,
       observacao: values.observacao,
       recorrente: values.recorrente,
       periodicidade: values.recorrente ? ("MENSAL" as const) : undefined,
