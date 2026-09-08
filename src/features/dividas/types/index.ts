@@ -47,7 +47,7 @@ export interface DividaRequest {
   tipo: TipoDivida;
   valorTotal: number;
   dataInicio: string;
-  dataFim?: string;
+  dataFim?: string | null;
   observacao?: string;
   parcelas?: number;
   recorrente?: boolean;

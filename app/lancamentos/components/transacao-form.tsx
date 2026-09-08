@@ -41,9 +41,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search, Plus, History } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, CalendarIcon, Repeat, Check, ChevronsUpDown, CreditCard, Search, Plus, History, Save, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CategoriaFormDialog } from "../../categorias/components/categoria-form-dialog";
 
 // 1. Zod Validation Schema
@@ -102,6 +102,7 @@ const transacaoSchema = z.object({
 type TransacaoFormValues = z.infer<typeof transacaoSchema>;
 
 export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => void, initialData?: any }) {
+  const closeAfterSaveRef = useRef(true);
   const createMutation = useCreateTransacao();
   const updateMutation = useUpdateTransacao();
   const updateRecorrenteMutation = useUpdateRecorrencia();
@@ -338,7 +339,9 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
         }
       }
       reset();
-      onSuccess();
+      if (closeAfterSaveRef.current) {
+        onSuccess();
+      }
     } catch (e) {
       console.error("Form error:", e);
     }
@@ -1038,16 +1041,30 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
          <Button type="button" variant="ghost" onClick={onSuccess} disabled={isSaving}>
             Cancelar
          </Button>
+         {!initialData?.id && (
+           <Button 
+             type="submit" 
+             variant="outline"
+             className="px-5 transition-all hover:scale-[1.02] active:scale-[0.98] border-border/50 hover:bg-white/5"
+             disabled={isSaving}
+             onClick={() => { closeAfterSaveRef.current = false; }}
+           >
+              <Save className="h-4 w-4 mr-1.5" />
+              {isSaving && !closeAfterSaveRef.current ? "Salvando..." : "Salvar"}
+           </Button>
+         )}
          <Button 
            type="submit" 
            className={cn(
-             "px-8 transition-all hover:scale-[1.02] active:scale-[0.98]",
+             "px-6 transition-all hover:scale-[1.02] active:scale-[0.98]",
              tipoSelecionado === TipoTransacao.RECEITA ? "bg-green-600 hover:bg-green-500" :
              tipoSelecionado === TipoTransacao.TRANSFERENCIA ? "bg-blue-600 hover:bg-blue-500" : "bg-primary"
            )}
            disabled={isSaving}
+           onClick={() => { closeAfterSaveRef.current = true; }}
          >
-            {isSaving ? "Salvando..." : (initialData?.id ? "Atualizar" : "Salvar Lançamento")}
+            <LogOut className="h-4 w-4 mr-1.5" />
+            {isSaving && closeAfterSaveRef.current ? "Salvando..." : (initialData?.id ? "Atualizar" : "Salvar e Sair")}
          </Button>
       </div>
 
