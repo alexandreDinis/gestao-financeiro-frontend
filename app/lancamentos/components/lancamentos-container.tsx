@@ -9,6 +9,8 @@ import { TransacoesFilters } from "./transacoes-filters";
 import { TransacoesTable } from "./transacoes-table";
 import { TransacaoFormDialog } from "./transacao-form-dialog";
 import { UltimaTransacaoCard } from "./ultima-transacao-card";
+import { api } from "@/lib/axios";
+import { toast } from "@/lib/toast";
 
 export function LancamentosContainer() {
   const searchParams = useSearchParams();
@@ -26,7 +28,34 @@ export function LancamentosContainer() {
     setIsFormOpen(true);
   };
 
-  const handleEdit = (t: any) => {
+  const handleEdit = async (t: any) => {
+    // Parcela de cartão: carrega a compra original (valor total, nº de parcelas, data da compra)
+    // para que a edição altere a MESMA compra em vez de usar os dados de uma parcela isolada.
+    if (t?.origem === "PARCELA" && t?.transacaoId) {
+      try {
+        const { data } = await api.get(`/transacoes/${t.transacaoId}`);
+        const compra = data.data;
+        setEditingTransacao({
+          id: compra.id,
+          transacaoId: compra.id,
+          descricao: compra.descricao,
+          valor: compra.valor,
+          tipo: compra.tipo,
+          data: compra.data,
+          categoriaId: compra.categoria?.id ?? t.categoriaId,
+          contaId: compra.lancamentos?.[0]?.contaId ?? t.contaId,
+          parcelas: compra.numeroParcelas || t.totalParcelas || 1,
+          observacao: compra.observacao,
+          status: compra.status,
+        });
+        setIsFormOpen(true);
+        return;
+      } catch (e) {
+        console.error("Erro ao carregar compra para edição:", e);
+        toast.error("Erro", "Não foi possível carregar a compra para edição.");
+        return;
+      }
+    }
     setEditingTransacao(t);
     setIsFormOpen(true);
   };
