@@ -9,7 +9,7 @@ import { NumericFormat } from "react-number-format";
 import { useCreateTransacao, useCreateTransacaoRecorrente, useUpdateTransacao, useUltimaTransacao } from "@/hooks/use-transacoes";
 import { useUpdateRecorrencia } from "@/hooks/use-recorrencias";
 import { useCartoesQuery } from "@/features/cartoes/hooks/use-cartoes-query";
-import { useCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
+import { useCompraCartaoMutation, useAtualizarCompraCartaoMutation } from "@/features/cartoes/hooks/use-cartoes-mutation";
 import { useCriarDividaMutation } from "@/features/dividas/hooks/use-dividas-mutation";
 import { DividaRequest } from "@/features/dividas/types";
 import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
@@ -108,6 +108,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
   const updateRecorrenteMutation = useUpdateRecorrencia();
   const createRecorrenteMutation = useCreateTransacaoRecorrente();
   const compraCartaoMutation = useCompraCartaoMutation();
+  const atualizarCompraCartaoMutation = useAtualizarCompraCartaoMutation();
   const criarDividaMutation = useCriarDividaMutation();
   const { data: fetchPessoas } = usePessoasQuery();
   const pessoas = fetchPessoas || [];
@@ -301,14 +302,21 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
           await createRecorrenteMutation.mutateAsync(payload);
         }
       } else if (cartaoCorrespondente && isDespesa) {
-        await compraCartaoMutation.mutateAsync({
+        const compraPayload = {
            cartaoId: cartaoCorrespondente.id,
            categoriaId: data.categoriaId!,
            descricao: data.descricao,
            valor: data.valor,
            parcelas: data.parcelas || 1,
            data: data.data,
-        });
+        };
+        const transacaoIdEdicao = initialData?.transacaoId || initialData?.id;
+        if (transacaoIdEdicao) {
+          // Edição: atualiza a MESMA compra (redistribui parcelas) em vez de criar outra
+          await atualizarCompraCartaoMutation.mutateAsync({ transacaoId: transacaoIdEdicao, request: compraPayload });
+        } else {
+          await compraCartaoMutation.mutateAsync(compraPayload);
+        }
       } else if (data.isParcelado && data.numParcelas && data.numParcelas >= 2) {
         const dividaPayload: DividaRequest = {
           pessoaId: data.pessoaId || undefined,
@@ -347,7 +355,7 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
     }
   };
 
-  const isSaving = isSubmitting || createMutation.isPending || createRecorrenteMutation.isPending || compraCartaoMutation.isPending || criarDividaMutation.isPending;
+  const isSaving = isSubmitting || createMutation.isPending || createRecorrenteMutation.isPending || compraCartaoMutation.isPending || atualizarCompraCartaoMutation.isPending || criarDividaMutation.isPending;
 
   if (!isMounted) return null;
 

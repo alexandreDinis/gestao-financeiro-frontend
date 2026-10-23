@@ -51,5 +51,11 @@ export const CartoesService = {
   comprar: async (request: CompraCartaoRequest): Promise<FaturaCartao> => {
     const { data } = await api.post<ApiResponse<FaturaCartao>>('/cartoes/compra', request);
     return data.data;
+  },
+
+  // Edita compra existente (redistribui as parcelas sem criar nova transação)
+  atualizarCompra: async (transacaoId: number, request: CompraCartaoRequest): Promise<FaturaCartao> => {
+    const { data } = await api.put<ApiResponse<FaturaCartao>>(`/cartoes/compra/${transacaoId}`, request);
+    return data.data;
   }
 };
