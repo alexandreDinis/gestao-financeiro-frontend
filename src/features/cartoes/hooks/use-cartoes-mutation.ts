@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CartoesService } from "../services/cartoes.service";
+import { CompraCartaoRequest } from "../types";
 import { CARTOES_QUERY_KEY, FATURAS_QUERY_KEY } from "./use-cartoes-query";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/lib/toast";
@@ -81,6 +82,28 @@ export function useCompraCartaoMutation() {
     },
     onError: (error: any) => {
       toast.error("Erro", error.response?.data?.message || "Não foi possível registrar a compra no cartão.");
+    }
+  });
+}
+
+export function useAtualizarCompraCartaoMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ transacaoId, request }: { transacaoId: number; request: CompraCartaoRequest }) =>
+      CartoesService.atualizarCompra(transacaoId, request),
+    onSuccess: (_, variables) => {
+      toast.success("Compra Atualizada", "As parcelas foram recalculadas na fatura do cartão.");
+      queryClient.invalidateQueries({ queryKey: [FATURAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: [FATURAS_QUERY_KEY, user?.tenantId, variables.request.cartaoId] });
+      queryClient.invalidateQueries({ queryKey: [CARTOES_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["transacoes", user?.tenantId || "unknown_tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível atualizar a compra no cartão.");
     }
   });
 }
