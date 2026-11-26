@@ -257,7 +257,7 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
             <Button
               type="submit"
               disabled={pagarMutation.isPending}
-              className={`${tipo === 'A_RECEBER' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-primary hover:bg-primary/90 text-white'}`}
+              className={`${tipo === 'A_RECEBER' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
             >
               {pagarMutation.isPending ? "Processando..." : (tipo === 'A_RECEBER' ? "Confirmar Recebimento" : "Confirmar Pagamento")}
             </Button>

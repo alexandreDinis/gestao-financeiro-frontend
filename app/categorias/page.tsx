@@ -154,7 +154,7 @@ export default function CategoriasPage() {
             </div>
             <Button
               onClick={openCreate}
-              className="bg-primary/80 hover:bg-primary text-white shadow-[0_0_15px_rgba(var(--primary),0.3)] transition-all duration-300"
+              className="bg-primary/90 hover:bg-primary text-primary-foreground shadow-[0_0_20px_rgba(255,255,255,0.16)] transition-all duration-300"
             >
               <Plus size={18} />
               Nova Categoria
