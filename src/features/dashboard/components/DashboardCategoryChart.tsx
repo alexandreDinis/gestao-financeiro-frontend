@@ -1,103 +1,157 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip, 
-  ResponsiveContainer,
-  Legend
-} from "recharts";
-import { GastoPorCategoria } from "@/types";
+import { useEffect, useMemo, useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePrivacy } from "@/hooks/use-privacy";
+import type { GastoPorCategoria } from "@/types";
 
 interface Props {
   data: GastoPorCategoria[];
   loading: boolean;
 }
 
+const COLORS = ["#ffffff", "#a3a3a3", "#34d399", "#fbbf24", "#f87171", "#60a5fa", "#c084fc", "#38bdf8"];
+
 export function DashboardCategoryChart({ data, loading }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const { privacyMode } = usePrivacy();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    }).format(value);
-  };
+  const totalGeral = useMemo(() => data.reduce((acc, item) => acc + (item.total || 0), 0), [data]);
 
-  const COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#ec4899', '#f97316', '#06b6d4'];
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+
+  const formatCompact = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      notation: "compact",
+    }).format(value);
+
+  const moneyClass = `tabular-nums transition-all duration-200 ${privacyMode ? "privacy-blur" : ""}`;
 
   if (loading || !mounted) {
     return (
-      <Card className="glass-panel h-[400px]">
-        <CardHeader>
-          <div className="h-6 w-32 bg-white/10 rounded animate-pulse" />
-          <div className="h-4 w-48 bg-white/10 rounded animate-pulse mt-2" />
-        </CardHeader>
-        <CardContent className="h-full flex items-center justify-center -mt-10">
-           <div className="h-[200px] w-[200px] rounded-full bg-white/5 animate-pulse" />
-        </CardContent>
-      </Card>
+      <div className="glass-panel rounded-2xl p-5 space-y-4">
+        <Skeleton className="h-5 w-40 bg-white/10" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-32 w-32 rounded-full bg-white/5 shrink-0" />
+          <div className="flex-1 space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-4 w-full bg-white/5" />
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 
-  if (data.length === 0) return null;
+  if (!data || data.length === 0) {
+    return (
+      <div className="glass-panel rounded-2xl p-5 flex flex-col justify-center items-center text-center min-h-[240px]">
+        <h2 className="text-base font-bold text-foreground">Gastos por Categoria</h2>
+        <p className="text-xs text-muted-foreground mt-1">Sem despesas categorizadas neste mês.</p>
+      </div>
+    );
+  }
+
+  const activeItem = activeIndex !== null ? data[activeIndex] : null;
 
   return (
-    <Card className="glass-panel h-[400px] flex flex-col">
-      <CardHeader>
-        <CardTitle>Gastos por Categoria</CardTitle>
-        <CardDescription>Distribuição percentual no mês</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="total"
-              nameKey="nomeCategoria"
-            >
-              {data.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip 
-               contentStyle={{ 
-                backgroundColor: '#0f172a', 
-                border: '1px solid #ffffff10',
-                borderRadius: '12px',
-                color: '#fff'
-              }}
-              formatter={(value: any) => [formatCurrency(Number(value || 0)), '']}
-            />
-            <Legend 
-                layout="vertical" 
-                verticalAlign="middle" 
-                align="right"
-                wrapperStyle={{ paddingLeft: '20px' }}
-                formatter={(value: string) => {
-                    const item = data.find(d => d.nomeCategoria === value);
-                    return (
-                        <span className="text-xs text-muted-foreground">
-                            {value} ({item?.percentualSobreTotal.toFixed(0)}%)
-                        </span>
-                    );
-                }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    <div className="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="text-base font-bold text-foreground">Gastos por Categoria</h2>
+          <p className="text-xs text-muted-foreground">Passe o mouse para detalhar</p>
+        </div>
+        <span className="text-[11px] font-mono text-muted-foreground">{data.length} itens</span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center gap-4 my-1">
+        <div className="relative w-36 h-36 shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={44}
+                outerRadius={64}
+                paddingAngle={3}
+                dataKey="total"
+                nameKey="nomeCategoria"
+                stroke="none"
+                onMouseEnter={(_, idx) => setActiveIndex(idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                {data.map((_, idx) => (
+                  <Cell
+                    key={`cat-${idx}`}
+                    fill={COLORS[idx % COLORS.length]}
+                    fillOpacity={activeIndex === null || activeIndex === idx ? 1 : 0.35}
+                    className="cursor-pointer transition-opacity duration-150"
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-3">
+            <span className="text-[10px] text-muted-foreground truncate max-w-[78px]">
+              {activeItem ? activeItem.nomeCategoria : "Total"}
+            </span>
+            <span className={`text-sm font-bold text-foreground ${moneyClass}`}>
+              {activeItem ? formatCompact(activeItem.total) : formatCompact(totalGeral)}
+            </span>
+            {activeItem && (
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {activeItem.percentualSobreTotal.toFixed(0)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 w-full space-y-1.5 max-h-[168px] overflow-y-auto pr-1">
+          {data.slice(0, 6).map((item, idx) => {
+            const isHighlighted = activeIndex === idx;
+            return (
+              <div
+                key={item.categoriaId ?? idx}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                  isHighlighted ? "bg-white/10" : "hover:bg-white/5"
+                }`}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                  />
+                  <span className="truncate text-foreground">{item.nomeCategoria}</span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className={`text-muted-foreground hidden sm:inline ${moneyClass}`}>
+                    {formatCurrency(item.total)}
+                  </span>
+                  <span className="font-mono font-semibold text-foreground tabular-nums w-9 text-right">
+                    {item.percentualSobreTotal.toFixed(0)}%
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
