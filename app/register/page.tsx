@@ -156,7 +156,7 @@ export default function RegisterPage() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-primary/80 hover:bg-primary text-white shadow-[0_0_15px_rgba(var(--primary),0.5)] transition-all duration-300 mt-6"
+                className="w-full bg-primary/90 hover:bg-primary text-primary-foreground shadow-[0_0_20px_rgba(255,255,255,0.18)] transition-all duration-300 mt-6"
                 disabled={isLoading}
               >
                 {isLoading ? "Criando Conta..." : "Registrar Conta"}

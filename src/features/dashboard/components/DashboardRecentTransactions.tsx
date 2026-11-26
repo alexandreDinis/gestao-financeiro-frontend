@@ -170,13 +170,13 @@ export function DashboardRecentTransactions({ recentes, proximos, loading }: Pro
           <TabsList className="grid w-full grid-cols-2 bg-black/40 border border-white/5 p-1 mb-4 h-9">
             <TabsTrigger 
                 value="recentes" 
-                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all"
+                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
             >
               Recentes
             </TabsTrigger>
             <TabsTrigger 
                 value="proximas" 
-                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2"
+                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex items-center gap-2"
             >
               Vencimentos
               {proximos.length > 0 && (

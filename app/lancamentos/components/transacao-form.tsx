@@ -1065,8 +1065,8 @@ export function TransacaoForm({ onSuccess, initialData }: { onSuccess: () => voi
            type="submit" 
            className={cn(
              "px-6 transition-all hover:scale-[1.02] active:scale-[0.98]",
-             tipoSelecionado === TipoTransacao.RECEITA ? "bg-green-600 hover:bg-green-500" :
-             tipoSelecionado === TipoTransacao.TRANSFERENCIA ? "bg-blue-600 hover:bg-blue-500" : "bg-primary"
+             tipoSelecionado === TipoTransacao.RECEITA ? "bg-green-600 hover:bg-green-500 text-white" :
+             tipoSelecionado === TipoTransacao.TRANSFERENCIA ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-primary text-primary-foreground"
            )}
            disabled={isSaving}
            onClick={() => { closeAfterSaveRef.current = true; }}

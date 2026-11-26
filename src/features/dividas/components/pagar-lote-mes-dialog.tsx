@@ -437,7 +437,7 @@ export function PagarLoteMesDialog({ open, onOpenChange, dividas, tipo, mes, ano
             <Button
               type="submit"
               disabled={pagarLoteMutation.isPending || selectedIds.size === 0}
-              className={`${isReceber ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-primary hover:bg-primary/90 text-white'} gap-2`}
+              className={`${isReceber ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'} gap-2`}
             >
               {pagarLoteMutation.isPending ? (
                 <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

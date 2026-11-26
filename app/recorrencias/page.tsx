@@ -35,7 +35,7 @@ export default function RecorrenciasPage() {
           
           <Button 
             onClick={handleCreateNew}
-            className="bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(var(--primary),0.4)]"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(255,255,255,0.16)]"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Nova Assinatura / Fixa
