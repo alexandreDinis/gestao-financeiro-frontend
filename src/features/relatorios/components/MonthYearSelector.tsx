@@ -15,48 +15,43 @@ interface MonthYearSelectorProps {
 
 export function MonthYearSelector({ mes, ano, onChange }: MonthYearSelectorProps) {
   const goToPrevious = () => {
-    if (mes === 1) {
-      onChange(ano - 1, 12);
-    } else {
-      onChange(ano, mes - 1);
-    }
+    if (mes === 1) onChange(ano - 1, 12);
+    else onChange(ano, mes - 1);
   };
 
   const goToNext = () => {
-    if (mes === 12) {
-      onChange(ano + 1, 1);
-    } else {
-      onChange(ano, mes + 1);
-    }
+    if (mes === 12) onChange(ano + 1, 1);
+    else onChange(ano, mes + 1);
   };
 
   return (
-    <div className="flex items-center gap-3" id="month-year-selector">
+    <div
+      className="inline-flex items-center gap-1 px-1.5 py-1 rounded-xl glass-panel border border-white/10"
+      id="month-year-selector"
+    >
       <button
+        type="button"
         onClick={goToPrevious}
-        className="p-2 rounded-lg border border-border/40 bg-card hover:bg-muted/50 hover:border-primary/30 transition-all duration-200 text-muted-foreground hover:text-primary"
+        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
         aria-label="Mês anterior"
         id="btn-previous-month"
       >
-        <ChevronLeft size={18} />
+        <ChevronLeft size={16} />
       </button>
 
-      <div className="min-w-[180px] text-center px-4 py-2 rounded-lg border border-primary/20 bg-primary/5">
-        <span className="text-lg font-bold text-white tracking-wide">
-          {MESES[mes - 1]}
-        </span>
-        <span className="text-lg font-light text-muted-foreground ml-2">
-          {ano}
-        </span>
+      <div className="min-w-[146px] text-center px-2">
+        <span className="text-sm font-semibold text-foreground">{MESES[mes - 1]}</span>
+        <span className="text-sm text-muted-foreground ml-1.5 tabular-nums">{ano}</span>
       </div>
 
       <button
+        type="button"
         onClick={goToNext}
-        className="p-2 rounded-lg border border-border/40 bg-card hover:bg-muted/50 hover:border-primary/30 transition-all duration-200 text-muted-foreground hover:text-primary"
+        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
         aria-label="Próximo mês"
         id="btn-next-month"
       >
-        <ChevronRight size={18} />
+        <ChevronRight size={16} />
       </button>
     </div>
   );
