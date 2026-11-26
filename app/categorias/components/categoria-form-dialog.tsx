@@ -236,7 +236,7 @@ export function CategoriaFormDialog({
             <Button
               type="submit"
               disabled={isSaving}
-              className="bg-primary/80 hover:bg-primary text-white shadow-[0_0_12px_rgba(var(--primary),0.3)]"
+              className="bg-primary/90 hover:bg-primary text-primary-foreground shadow-[0_0_18px_rgba(255,255,255,0.14)]"
             >
               {isSaving ? "Salvando..." : editingId ? "Salvar" : "Criar"}
             </Button>

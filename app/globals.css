@@ -7,10 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
-  /* Cyberpunk / Minority Report Colors */
+
+  /* Obsidian Noir Custom Tokens */
   --color-neon-blue: var(--neon-blue);
   --color-neon-blue-glow: var(--neon-blue-glow);
   --color-dark-glass: var(--dark-glass);
@@ -55,94 +55,96 @@
 }
 
 :root {
-  /* Defaulting root to dark mode for the "Minority Report" aesthetic */
-  --background: oklch(0.12 0.01 250); /* Deep dark blue-grey */
-  --foreground: oklch(0.985 0 0); /* White/Light Grey text */
-  --card: oklch(0.15 0.02 250 / 0.7); /* Translucent dark background */
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.15 0.02 250 / 0.8);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.25 250); /* Neon Blue */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.25 0.05 250); /* Darker blue accent */
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.20 0.02 250);
-  --muted-foreground: oklch(0.70 0.02 250);
-  --accent: oklch(0.25 0.05 250 / 0.8);
+  /* Obsidian Noir — Dark Preto & Branco Futurista */
+  --background: oklch(0.08 0 0); /* Pitch black #050505 */
+  --foreground: oklch(0.97 0 0); /* Crisp white */
+  --card: oklch(0.13 0 0 / 0.92); /* Obsidian surface #111111 */
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.12 0 0 / 0.96);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.985 0 0); /* Pure white accent */
+  --primary-foreground: oklch(0.08 0 0); /* Deep black text on white */
+  --secondary: oklch(0.18 0 0); /* Charcoal #1e1e1e */
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.16 0 0); /* Subtle dark surface */
+  --muted-foreground: oklch(0.64 0 0); /* Neutral silver */
+  --accent: oklch(0.20 0 0); /* Hover surface */
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.60 0.20 20); /* Neon Red/Orange */
-  --border: oklch(0.65 0.25 250 / 0.2); /* Soft neon blue border */
-  --input: oklch(0.65 0.25 250 / 0.15);
-  --ring: oklch(0.65 0.25 250);
-  
-  --chart-1: oklch(0.65 0.25 250); /* Neon Blue */
-  --chart-2: oklch(0.75 0.20 190); /* Cyan */
-  --chart-3: oklch(0.85 0.15 140); /* Greenish */
-  --chart-4: oklch(0.60 0.20 300); /* Purpleish */
-  --chart-5: oklch(0.55 0.20 20); /* Reddish */
-  
-  --radius: 0.75rem;
-  
-  --sidebar: oklch(0.12 0.01 250 / 0.8);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.25 250);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.25 0.05 250 / 0.5);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.65 0.25 250 / 0.2);
-  --sidebar-ring: oklch(0.65 0.25 250);
+  --destructive: oklch(0.62 0.20 22); /* Clean crimson for expenses/errors */
+  --border: oklch(1 0 0 / 0.10); /* Architectural hairline */
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(1 0 0 / 0.35);
 
-  /* Custom Customizations */
-  --neon-blue: oklch(0.65 0.25 250);
-  --neon-blue-glow: 0 0 10px oklch(0.65 0.25 250 / 0.5), 0 0 20px oklch(0.65 0.25 250 / 0.3);
-  --dark-glass: oklch(0.12 0.01 250 / 0.6);
-  --dark-glass-border: 1px solid oklch(0.65 0.25 250 / 0.2);
+  --chart-1: oklch(0.985 0 0); /* Pure White */
+  --chart-2: oklch(0.75 0 0); /* Silver */
+  --chart-3: oklch(0.74 0.16 160); /* Emerald (Receitas) */
+  --chart-4: oklch(0.50 0 0); /* Graphite */
+  --chart-5: oklch(0.64 0.20 22); /* Rose (Despesas) */
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.06 0 0 / 0.92);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.08 0 0);
+  --sidebar-accent: oklch(0.16 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 0.09);
+  --sidebar-ring: oklch(1 0 0 / 0.35);
+
+  /* Custom Tokens (Monochrome Glow) */
+  --neon-blue: oklch(0.985 0 0);
+  --neon-blue-glow: 0 0 12px oklch(1 0 0 / 0.22), 0 0 24px oklch(1 0 0 / 0.10);
+  --dark-glass: oklch(0.11 0 0 / 0.85);
+  --dark-glass-border: 1px solid oklch(1 0 0 / 0.10);
 }
 
 .dark {
-  /* Enforcing the same deep aesthetic even if dark is toggled explicitly */
-  --background: oklch(0.12 0.01 250); 
-  --foreground: oklch(0.985 0 0); 
-  --card: oklch(0.15 0.02 250 / 0.7); 
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.15 0.02 250 / 0.8);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.25 250); 
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.25 0.05 250); 
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.20 0.02 250);
-  --muted-foreground: oklch(0.70 0.02 250);
-  --accent: oklch(0.25 0.05 250 / 0.8);
+  /* Obsidian Noir — Enforced on .dark */
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.13 0 0 / 0.92);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.12 0 0 / 0.96);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.08 0 0);
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.16 0 0);
+  --muted-foreground: oklch(0.64 0 0);
+  --accent: oklch(0.20 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.60 0.20 20); 
-  --border: oklch(0.65 0.25 250 / 0.2); 
-  --input: oklch(0.65 0.25 250 / 0.15);
-  --ring: oklch(0.65 0.25 250);
-  
-  --chart-1: oklch(0.65 0.25 250); 
-  --chart-2: oklch(0.75 0.20 190); 
-  --chart-3: oklch(0.85 0.15 140);
-  --chart-4: oklch(0.60 0.20 300);
-  --chart-5: oklch(0.55 0.20 20);
-  
-  --sidebar: oklch(0.12 0.01 250 / 0.8);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.25 250);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.25 0.05 250 / 0.5);
+  --destructive: oklch(0.62 0.20 22);
+  --border: oklch(1 0 0 / 0.10);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(1 0 0 / 0.35);
+
+  --chart-1: oklch(0.985 0 0);
+  --chart-2: oklch(0.75 0 0);
+  --chart-3: oklch(0.74 0.16 160);
+  --chart-4: oklch(0.50 0 0);
+  --chart-5: oklch(0.64 0.20 22);
+
+  --sidebar: oklch(0.06 0 0 / 0.92);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.08 0 0);
+  --sidebar-accent: oklch(0.16 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.65 0.25 250 / 0.2);
-  --sidebar-ring: oklch(0.65 0.25 250);
+  --sidebar-border: oklch(1 0 0 / 0.09);
+  --sidebar-ring: oklch(1 0 0 / 0.35);
 }
 
-/* Glassmorphism utility classes */
+/* Obsidian Noir utility classes */
 @layer utilities {
   .glass-panel {
-    @apply bg-card backdrop-blur-md border border-border shadow-[0_4px_30px_rgba(0,0,0,0.5)];
+    background: linear-gradient(180deg, rgba(22, 22, 22, 0.92) 0%, rgba(11, 11, 11, 0.96) 100%);
+    @apply backdrop-blur-xl border border-border;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 16px 40px -20px rgba(0, 0, 0, 0.9);
   }
   .neon-text {
-    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.28);
   }
 }
 
@@ -152,8 +154,11 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    /* Optional: Sublt radial gradient for pure minority report vibe */
-    background-image: radial-gradient(circle at 50% -20%, oklch(0.25 0.05 250 / 0.4), transparent 70%);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -15%, rgba(255, 255, 255, 0.07), transparent 70%),
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
     background-attachment: fixed;
   }
   html {

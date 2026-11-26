@@ -93,13 +93,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-all duration-200 ${
                     isActive
-                      ? "bg-primary/20 text-primary border border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                      ? "bg-primary text-primary-foreground font-semibold border border-primary shadow-[0_0_20px_rgba(255,255,255,0.16)]"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border/50 border border-transparent"
                   }`}
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 shrink-0 ${
-                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
                     }`}
                     aria-hidden="true"
                   />
