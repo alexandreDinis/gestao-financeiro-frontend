@@ -84,6 +84,7 @@ export interface PagarMultiplasParcelasRequest {
   categoriaId?: number;
   dataPagamento?: string;
   desconto?: number;
+  juros?: number;
 }
 
 export interface DividasResumo {
