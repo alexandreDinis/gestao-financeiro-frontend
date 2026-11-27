@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Conta, ApiResponse } from "@/types";
+import { DividaPausadaAlert } from "@/features/dividas/components/divida-pausada-alert";
 
 const pagarSchema = z.object({
   contaId: z.number().min(1, "Selecione uma conta"),
@@ -176,6 +177,10 @@ export function ConfirmarPagamentoVencimentoDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
+          <DividaPausadaAlert
+            dividaId={vencimento.dividaId}
+            pausarPrevisao={vencimento.pausarPrevisao}
+          />
           
           <div className="space-y-2">
             <Label>Valor Pago (R$)</Label>

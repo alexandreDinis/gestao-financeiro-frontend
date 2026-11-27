@@ -44,6 +44,7 @@ export interface Divida {
   periodicidade?: Periodicidade;
   diaVencimento?: number;
   valorParcelaRecorrente?: number;
+  pausarPrevisao?: boolean;
 }
 
 export interface DividaRequest {
@@ -63,6 +64,7 @@ export interface DividaRequest {
   periodicidade?: Periodicidade;
   diaVencimento?: number;
   valorParcelaRecorrente?: number;
+  pausarPrevisao?: boolean;
 }
 
 export interface PagarParcelaRequest {

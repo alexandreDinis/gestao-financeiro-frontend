@@ -49,6 +49,11 @@ export const DividasService = {
     return data.data;
   },
 
+  togglePausarPrevisao: async (id: number, pausarPrevisao: boolean): Promise<Divida> => {
+    const { data } = await api.patch(`/dividas/${id}/pausar-previsao`, { pausarPrevisao });
+    return data.data;
+  },
+
   pagarMultiplasParcelas: async (request: PagarMultiplasParcelasRequest): Promise<any> => {
     const { data } = await api.put("/dividas/parcelas/pagar-lote", request);
     return data.data;
