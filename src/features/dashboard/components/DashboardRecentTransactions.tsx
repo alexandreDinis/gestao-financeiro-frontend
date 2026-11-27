@@ -13,7 +13,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrivacy } from "@/hooks/use-privacy";
 import type { ProximosVencimentosDashboard, UltimaTransacao, Vencimento } from "@/types";
-import { ConfirmarPagamentoVencimentoDialog } from "./ConfirmarPagamentoVencimentoDialog";
 
 interface Props {
   recentes: UltimaTransacao[];
@@ -33,8 +32,6 @@ export function DashboardRecentTransactions({
   const { privacyMode } = usePrivacy();
   const [internalTab, setInternalTab] = useState<"vencimentos" | "recentes">("vencimentos");
   const [windowDays, setWindowDays] = useState<7 | 15 | 30>(7);
-  const [selectedVencimento, setSelectedVencimento] = useState<Vencimento | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const tab = activeTab ?? internalTab;
   const setTab = (next: "vencimentos" | "recentes") => {
@@ -62,16 +59,6 @@ export function DashboardRecentTransactions({
       : windowDays === 15
         ? proximosVencimentos?.proximos15Dias ?? []
         : proximosVencimentos?.proximos30Dias ?? [];
-
-  const canPayDirectly = (v: Vencimento) => {
-    const id = v.idUnico || "";
-    return (
-      id.startsWith("TRANSACAO-") ||
-      id.startsWith("PARCELA-DIVIDA-") ||
-      id.startsWith("FATURA-") ||
-      id.startsWith("RECORRENCIA-PROJ-")
-    );
-  };
 
   if (loading) {
     return (
@@ -214,18 +201,6 @@ export function DashboardRecentTransactions({
                           {formatCurrency(v.valor)}
                         </div>
                       </div>
-                      {canPayDirectly(v) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedVencimento(v);
-                            setDialogOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                        >
-                          {isReceita ? "Receber" : "Pagar"}
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
@@ -307,12 +282,6 @@ export function DashboardRecentTransactions({
           </div>
         )}
       </div>
-
-      <ConfirmarPagamentoVencimentoDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        vencimento={selectedVencimento}
-      />
     </>
   );
 }
