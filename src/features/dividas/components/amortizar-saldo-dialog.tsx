@@ -10,6 +10,7 @@ import { NumericFormat } from "react-number-format";
 import { CheckCircle2 } from "lucide-react";
 
 import { useRegistrarAmortizacaoMutation } from "../hooks/use-dividas-mutation";
+import { DividaPausadaAlert } from "./divida-pausada-alert";
 import type { Divida } from "../types";
 import type { ApiResponse, Conta } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -129,6 +130,11 @@ export function AmortizarSaldoDialog({ open, onOpenChange, divida }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-1">
+          <DividaPausadaAlert
+            dividaId={divida.id}
+            pausarPrevisao={divida.pausarPrevisao}
+          />
+
           {/* Resumo do Contrato */}
           <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-black/40 border border-white/10 text-xs">
             <div>

@@ -243,3 +243,27 @@ export function useRegistrarAmortizacaoMutation() {
     }
   });
 }
+
+export function useTogglePausarPrevisaoMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, pausarPrevisao }: { id: number; pausarPrevisao: boolean }) =>
+      DividasService.togglePausarPrevisao(id, pausarPrevisao),
+    onSuccess: (data) => {
+      if (data.pausarPrevisao) {
+        toast.success("Pausada da Previsão", "Esta dívida não infla mais o saldo previsto, mas segue ativa em Contas a Pagar/Receber.");
+      } else {
+        toast.success("Retomada na Previsão", "Esta dívida voltou a ser considerada na Previsão de Caixa.");
+      }
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["previsao-caixa"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["vencimentos-todos"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível atualizar a previsão da dívida.");
+    }
+  });
+}

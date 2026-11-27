@@ -10,6 +10,7 @@ import { api } from "@/lib/axios";
 import { NumericFormat } from "react-number-format";
 
 import { usePagarParcelaMutation } from "../hooks/use-dividas-mutation";
+import { DividaPausadaAlert } from "./divida-pausada-alert";
 import { ParcelaDivida, TipoDivida } from "../types";
 import { Conta, ApiResponse } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -39,6 +40,8 @@ interface PagarParcelaDialogProps {
   onOpenChange: (open: boolean) => void;
   parcela: ParcelaDivida | null;
   tipo: TipoDivida;
+  dividaId?: number | null;
+  pausarPrevisao?: boolean | null;
 }
 
 const pagarSchema = z.object({
@@ -53,7 +56,14 @@ const pagarSchema = z.object({
 
 type PagarFormValues = z.infer<typeof pagarSchema>;
 
-export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarParcelaDialogProps) {
+export function PagarParcelaDialog({
+  open,
+  onOpenChange,
+  parcela,
+  tipo,
+  dividaId,
+  pausarPrevisao,
+}: PagarParcelaDialogProps) {
   const { user } = useAuth();
   const pagarMutation = usePagarParcelaMutation();
   const [modoAjuste, setModoAjuste] = useState<"encargos" | "parcial">("encargos");
@@ -150,6 +160,11 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-1">
+          <DividaPausadaAlert
+            dividaId={dividaId}
+            pausarPrevisao={pausarPrevisao}
+          />
+
           {/* Resumo Original */}
           <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Valor original da parcela</span>

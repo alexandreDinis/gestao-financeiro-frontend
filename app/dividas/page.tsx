@@ -14,6 +14,8 @@ import {
   Eye,
   EyeOff,
   Layers,
+  PauseCircle,
+  PlayCircle,
   Plus,
   RefreshCcw,
   Search,
@@ -32,6 +34,7 @@ import {
   useAtualizarLinhaDigitavelMutation,
   useCancelarRecorrenciaMutation,
   useDeletarDividaMutation,
+  useTogglePausarPrevisaoMutation,
 } from "@/features/dividas/hooks/use-dividas-mutation";
 import { DividasService } from "@/features/dividas/services/dividas.service";
 import { DividaFilters } from "@/features/dividas/components/divida-filters";
@@ -96,7 +99,12 @@ export default function BoletosEDividasPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [dividaToEdit, setDividaToEdit] = useState<Divida | null>(null);
   const [payOpen, setPayOpen] = useState(false);
-  const [payingParcela, setPayingParcela] = useState<{ parcela: ParcelaDivida; tipo: TipoDivida } | null>(null);
+  const [payingParcela, setPayingParcela] = useState<{
+    parcela: ParcelaDivida;
+    tipo: TipoDivida;
+    dividaId: number;
+    pausarPrevisao?: boolean;
+  } | null>(null);
   const [amortizarOpen, setAmortizarOpen] = useState(false);
   const [amortizarDivida, setAmortizarDivida] = useState<Divida | null>(null);
   const [loteOpen, setLoteOpen] = useState(false);
@@ -119,6 +127,7 @@ export default function BoletosEDividasPage() {
   const deletarMutation = useDeletarDividaMutation();
   const linhaMutation = useAtualizarLinhaDigitavelMutation();
   const cancelarRecorrenciaMutation = useCancelarRecorrenciaMutation();
+  const pausarPrevisaoMutation = useTogglePausarPrevisaoMutation();
 
   const items = useMemo(() => resumo?.items ?? [], [resumo]);
 
@@ -710,6 +719,11 @@ export default function BoletosEDividasPage() {
                             <RefreshCcw size={10} /> Recorrente Mensal
                           </span>
                         )}
+                        {divida.pausarPrevisao && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-zinc-500/20 text-zinc-300 border border-zinc-500/35">
+                            <PauseCircle size={10} /> Fora da Previsão
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           {isReceber ? (
                             <ArrowUpRight size={12} className="text-emerald-400" />
@@ -783,6 +797,33 @@ export default function BoletosEDividasPage() {
                       </div>
 
                       <div className="flex items-center gap-1">
+                        {divida.status !== "PAGA" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              pausarPrevisaoMutation.mutate({
+                                id: divida.id,
+                                pausarPrevisao: !divida.pausarPrevisao,
+                              })
+                            }
+                            className={`p-2 rounded-lg transition-colors ${
+                              divida.pausarPrevisao
+                                ? "text-emerald-400 hover:bg-emerald-500/10"
+                                : "text-muted-foreground hover:text-amber-300 hover:bg-amber-500/10"
+                            }`}
+                            title={
+                              divida.pausarPrevisao
+                                ? "Retomar na Previsão de Caixa"
+                                : "Pausar da Previsão de Caixa (Inadimplente)"
+                            }
+                          >
+                            {divida.pausarPrevisao ? (
+                              <PlayCircle size={15} />
+                            ) : (
+                              <PauseCircle size={15} />
+                            )}
+                          </button>
+                        )}
                         {divida.recorrente && (
                           <button
                             type="button"
@@ -1004,7 +1045,12 @@ export default function BoletosEDividasPage() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setPayingParcela({ parcela: p, tipo: divida.tipo });
+                                      setPayingParcela({
+                                        parcela: p,
+                                        tipo: divida.tipo,
+                                        dividaId: divida.id,
+                                        pausarPrevisao: divida.pausarPrevisao,
+                                      });
                                       setPayOpen(true);
                                     }}
                                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
@@ -1040,6 +1086,8 @@ export default function BoletosEDividasPage() {
         onOpenChange={setPayOpen}
         parcela={payingParcela?.parcela || null}
         tipo={payingParcela?.tipo || "A_PAGAR"}
+        dividaId={payingParcela?.dividaId}
+        pausarPrevisao={payingParcela?.pausarPrevisao}
       />
 
       <PagarLoteMesDialog
