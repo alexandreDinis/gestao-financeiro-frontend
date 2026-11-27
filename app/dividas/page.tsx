@@ -102,6 +102,7 @@ export default function BoletosEDividasPage() {
   const [payingParcela, setPayingParcela] = useState<{
     parcela: ParcelaDivida;
     tipo: TipoDivida;
+    divida: Divida;
     dividaId: number;
     pausarPrevisao?: boolean;
   } | null>(null);
@@ -777,6 +778,33 @@ export default function BoletosEDividasPage() {
                         </button>
                       )}
 
+                      {!isSaldoAberto &&
+                        divida.status !== "PAGA" &&
+                        (divida.parcelas || []).some(
+                          (p) => p.status !== "PAGO" && p.status !== "CANCELADO"
+                        ) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const proxima = [...(divida.parcelas || [])]
+                                .filter((p) => p.status !== "PAGO" && p.status !== "CANCELADO")
+                                .sort((a, b) => a.numeroParcela - b.numeroParcela)[0];
+                              if (!proxima) return;
+                              setPayingParcela({
+                                parcela: proxima,
+                                tipo: divida.tipo,
+                                divida,
+                                dividaId: divida.id,
+                                pausarPrevisao: divida.pausarPrevisao,
+                              });
+                              setPayOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity inline-flex items-center gap-1"
+                          >
+                            {isReceber ? "Receber / Adiantar" : "Pagar / Adiantar"}
+                          </button>
+                        )}
+
                       <div className="text-right min-w-[115px]">
                         <div className="text-[11px] text-muted-foreground">
                           {ano && mes
@@ -1048,6 +1076,7 @@ export default function BoletosEDividasPage() {
                                       setPayingParcela({
                                         parcela: p,
                                         tipo: divida.tipo,
+                                        divida,
                                         dividaId: divida.id,
                                         pausarPrevisao: divida.pausarPrevisao,
                                       });
@@ -1086,6 +1115,7 @@ export default function BoletosEDividasPage() {
         onOpenChange={setPayOpen}
         parcela={payingParcela?.parcela || null}
         tipo={payingParcela?.tipo || "A_PAGAR"}
+        divida={payingParcela?.divida || null}
         dividaId={payingParcela?.dividaId}
         pausarPrevisao={payingParcela?.pausarPrevisao}
       />

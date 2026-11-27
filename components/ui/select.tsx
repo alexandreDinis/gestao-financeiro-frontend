@@ -6,7 +6,69 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+interface SelectLabelContextValue {
+  currentValue: unknown
+  labels: Map<string, React.ReactNode>
+}
+
+const SelectLabelContext = React.createContext<SelectLabelContextValue | null>(null)
+
+function collectSelectLabels(
+  children: React.ReactNode,
+  map: Map<string, React.ReactNode>
+) {
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as Record<string, any>
+    if (child.type === SelectItem && props?.value !== undefined && props?.value !== null) {
+      map.set(String(props.value), props.children)
+    }
+    if (props?.children) {
+      collectSelectLabels(props.children, map)
+    }
+  })
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  value,
+  defaultValue,
+  onValueChange,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const [uncontrolledValue, setUncontrolledValue] = React.useState<unknown>(defaultValue)
+  const isControlled = value !== undefined
+  const currentValue = isControlled ? value : uncontrolledValue
+
+  const labels = React.useMemo(() => {
+    const map = new Map<string, React.ReactNode>()
+    collectSelectLabels(children, map)
+    return map
+  }, [children])
+
+  const handleValueChange = React.useCallback(
+    (nextValue: any, eventDetails: any) => {
+      if (!isControlled) {
+        setUncontrolledValue(nextValue)
+      }
+      onValueChange?.(nextValue, eventDetails)
+    },
+    [isControlled, onValueChange]
+  )
+
+  return (
+    <SelectLabelContext.Provider value={{ currentValue, labels }}>
+      <SelectPrimitive.Root
+        value={value}
+        defaultValue={defaultValue}
+        onValueChange={handleValueChange}
+        {...props}
+      >
+        {children}
+      </SelectPrimitive.Root>
+    </SelectLabelContext.Provider>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -18,13 +80,31 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, children, ...props }: SelectPrimitive.Value.Props) {
+  const ctx = React.useContext(SelectLabelContext)
+
+  let resolvedChildren = children
+  if (
+    resolvedChildren === undefined &&
+    ctx &&
+    ctx.currentValue !== undefined &&
+    ctx.currentValue !== null &&
+    ctx.currentValue !== ""
+  ) {
+    const label = ctx.labels.get(String(ctx.currentValue))
+    if (label !== undefined) {
+      resolvedChildren = label
+    }
+  }
+
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
       {...props}
-    />
+    >
+      {resolvedChildren}
+    </SelectPrimitive.Value>
   )
 }
 
