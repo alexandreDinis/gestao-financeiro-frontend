@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import { NumericFormat } from "react-number-format";
 import { usePagarParcelaMutation } from "../hooks/use-dividas-mutation";
 import { ParcelaDivida, TipoDivida } from "../types";
 import { Conta, ApiResponse } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
 
 import {
   Dialog,
@@ -31,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface PagarParcelaDialogProps {
   open: boolean;
@@ -43,21 +44,27 @@ interface PagarParcelaDialogProps {
 const pagarSchema = z.object({
   contaId: z.number().min(1, "Selecione uma conta"),
   valorPago: z.number().positive("O valor deve ser maior que zero"),
+  valorJuros: z.number().min(0, "Juros não pode ser negativo").optional(),
+  valorDesconto: z.number().min(0, "Desconto não pode ser negativo").optional(),
   dataPagamento: z.string().nonempty("Data é obrigatória"),
   descontarExcedenteDe: z.enum(["PROXIMA", "ULTIMA"]).optional(),
+  linhaDigitavel: z.string().optional(),
 });
 
 type PagarFormValues = z.infer<typeof pagarSchema>;
 
 export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarParcelaDialogProps) {
+  const { user } = useAuth();
   const pagarMutation = usePagarParcelaMutation();
+  const [modoAjuste, setModoAjuste] = useState<"encargos" | "parcial">("encargos");
 
   const { data: contas } = useQuery({
-    queryKey: ["contas"],
+    queryKey: ["contas", user?.tenantId],
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<Conta[]>>("/contas");
       return data.data;
-    }
+    },
+    enabled: !!user,
   });
 
   const { register, handleSubmit, control, reset, setValue, watch, formState: { errors } } = useForm<PagarFormValues>({
@@ -65,19 +72,27 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
     defaultValues: {
       dataPagamento: new Date().toISOString().split("T")[0],
       descontarExcedenteDe: "PROXIMA",
-    }
+      valorJuros: 0,
+      valorDesconto: 0,
+      linhaDigitavel: "",
+    },
   });
 
-  const valorPagoWatch = watch("valorPago");
+  const valorPagoWatch = watch("valorPago") || 0;
+  const valorJurosWatch = watch("valorJuros") || 0;
+  const valorDescontoWatch = watch("valorDesconto") || 0;
 
-  // Ao abrir o modal e ter a parcela, seta o valor real
   useEffect(() => {
-    if (parcela) {
+    if (parcela && open) {
+      setModoAjuste("encargos");
       setValue("valorPago", parcela.valor);
+      setValue("valorJuros", 0);
+      setValue("valorDesconto", 0);
+      setValue("linhaDigitavel", parcela.linhaDigitavel || "");
+      setValue("dataPagamento", new Date().toISOString().split("T")[0]);
     }
-  }, [parcela, setValue]);
+  }, [parcela, open, setValue]);
 
-  // Auto-selecionar primeira conta se houver
   useEffect(() => {
     const currentContaId = watch("contaId");
     if (contas && contas.length > 0 && !currentContaId) {
@@ -85,181 +100,278 @@ export function PagarParcelaDialog({ open, onOpenChange, parcela, tipo }: PagarP
     }
   }, [contas, setValue, watch]);
 
-  const onSubmit = async (data: PagarFormValues) => {
-    if (!parcela) return;
+  if (!parcela) return null;
 
+  const totalComEncargos = Math.max(0, parcela.valor + valorJurosWatch - valorDescontoWatch);
+  const usaJurosOuDesconto = modoAjuste === "encargos" && (valorJurosWatch > 0 || valorDescontoWatch > 0);
+  const isPartial = modoAjuste === "parcial" && valorPagoWatch > 0 && valorPagoWatch < parcela.valor;
+  const isSurplus = modoAjuste === "parcial" && valorPagoWatch > parcela.valor;
+
+  const fmtBRL = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+  const onSubmit = async (data: PagarFormValues) => {
     await pagarMutation.mutateAsync({
       parcelaId: parcela.id,
       request: {
         contaId: data.contaId,
-        valorPago: data.valorPago,
         dataPagamento: data.dataPagamento,
-        descontarExcedenteDe: data.valorPago > parcela.valor ? (data.descontarExcedenteDe || "PROXIMA") : undefined,
-      }
+        linhaDigitavel: data.linhaDigitavel?.trim() || undefined,
+        ...(usaJurosOuDesconto
+          ? {
+              valorJuros: data.valorJuros || 0,
+              valorDesconto: data.valorDesconto || 0,
+            }
+          : {
+              valorPago: modoAjuste === "encargos" ? parcela.valor : data.valorPago,
+              descontarExcedenteDe:
+                modoAjuste === "parcial" && data.valorPago > parcela.valor
+                  ? data.descontarExcedenteDe || "PROXIMA"
+                  : undefined,
+            }),
+      },
     });
-    
+
     reset();
     onOpenChange(false);
   };
 
-  const isPartial = parcela && valorPagoWatch && valorPagoWatch < parcela.valor;
-  const isSurplus = parcela && valorPagoWatch && valorPagoWatch > parcela.valor;
-
-  if (!parcela) return null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-panel border-border/40 sm:max-w-[425px]">
+      <DialogContent className="glass-panel border-white/15 sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle>{tipo === "A_RECEBER" ? "Registrar Recebimento" : "Pagar Parcela"}</DialogTitle>
+          <DialogTitle>
+            {tipo === "A_RECEBER" ? "Registrar Recebimento" : "Pagar Boleto / Parcela"}
+          </DialogTitle>
           <DialogDescription>
-            Confirme os detalhes do {tipo === "A_RECEBER" ? "recebimento" : "pagamento"} abaixo. Você pode ajustar o valor para pagamentos parciais.
+            {parcela.nomeDivida} · Parcela {parcela.numeroParcela} (vence em{" "}
+            {format(new Date(parcela.dataVencimento + "T12:00:00"), "dd/MM/yyyy")})
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
-          
-          <div className="bg-black/20 p-3 rounded text-sm border border-border/20">
-             <div className="flex justify-between text-muted-foreground mb-1">
-                <span>Parcela {parcela.numeroParcela}</span>
-                <span>Vencimento: {format(new Date(parcela.dataVencimento), "dd/MM/yyyy")}</span>
-             </div>
-             <div className="text-xl font-bold {tipo === 'A_RECEBER' ? 'text-green-400' : 'text-white'}">
-                R$ {parcela.valor.toFixed(2).replace('.', ',')} pendentes
-             </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-1">
+          {/* Resumo Original */}
+          <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Valor original da parcela</span>
+            <strong className="text-base font-bold text-foreground tabular-nums">
+              {fmtBRL(parcela.valor)}
+            </strong>
           </div>
 
-          <div className="space-y-2">
-            <Label>Valor a ser computado (R$)</Label>
-            <Controller
-              name="valorPago"
-              control={control}
-              render={({ field: { onChange, value } }) => (
-                 <NumericFormat
-                   value={value || ""}
-                   thousandSeparator="."
-                   decimalSeparator=","
-                   prefix="R$ "
-                   decimalScale={2}
-                   fixedDecimalScale
-                   allowNegative={false}
-                   onValueChange={(values) => onChange(values.floatValue || 0)}
-                   customInput={Input}
-                   className={`bg-black/40 text-lg border-border/50 ${errors.valorPago ? 'border-red-500/50' : ''}`}
-                 />
-              )}
-            />
-            {errors.valorPago && <p className="text-red-400 text-xs">{errors.valorPago.message}</p>}
-            
-            {isPartial && (
-              <p className="text-orange-400 text-xs flex items-center gap-1 mt-1">
-                <AlertCircle size={12} />
-                Pagamento parcial detectado. O restante (R$ {(parcela.valor - valorPagoWatch).toFixed(2).replace('.', ',')}) continuará pendente.
-              </p>
-            )}
+          {/* Toggle de Modo */}
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/40 border border-white/10 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setModoAjuste("encargos");
+                setValue("valorPago", parcela.valor);
+              }}
+              className={`py-1.5 rounded-lg font-medium transition-colors ${
+                modoAjuste === "encargos"
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Boleto / Juros &amp; Desconto
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModoAjuste("parcial");
+                setValue("valorJuros", 0);
+                setValue("valorDesconto", 0);
+              }}
+              className={`py-1.5 rounded-lg font-medium transition-colors ${
+                modoAjuste === "parcial"
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Parcial / Adiantamento
+            </button>
+          </div>
 
-            {isSurplus && (
-              <div className="bg-primary/10 border border-primary/30 p-3 rounded-lg space-y-2 animate-in fade-in duration-200 mt-2">
-                <p className="text-xs text-primary font-semibold flex items-center gap-1.5">
-                  <AlertCircle size={14} />
-                  Pagamento a maior detectado (Excedente: R$ {(valorPagoWatch - parcela.valor).toFixed(2).replace('.', ',')})
-                </p>
-                <Label className="text-xs text-muted-foreground">Onde deseja descontar o valor excedente?</Label>
-                <Controller
-                  name="descontarExcedenteDe"
-                  control={control}
-                  render={({ field }) => (
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button
-                        type="button"
-                        className={`p-2 text-xs rounded-lg border text-left transition-all ${
-                          field.value === "PROXIMA" || !field.value
-                            ? "border-primary bg-primary/20 text-white font-medium shadow-sm"
-                            : "border-border/40 bg-black/20 text-muted-foreground hover:bg-black/30"
-                        }`}
-                        onClick={() => field.onChange("PROXIMA")}
-                      >
-                        <div className="font-bold flex items-center gap-1">
-                          <span>⏭️ Próxima Parcela</span>
-                        </div>
-                        <span className="block text-[10px] text-muted-foreground mt-0.5 font-normal">Desconta da parcela seguinte</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className={`p-2 text-xs rounded-lg border text-left transition-all ${
-                          field.value === "ULTIMA"
-                            ? "border-primary bg-primary/20 text-white font-medium shadow-sm"
-                            : "border-border/40 bg-black/20 text-muted-foreground hover:bg-black/30"
-                        }`}
-                        onClick={() => field.onChange("ULTIMA")}
-                      >
-                        <div className="font-bold flex items-center gap-1">
-                          <span>⏮️ Última Parcela</span>
-                        </div>
-                        <span className="block text-[10px] text-muted-foreground mt-0.5 font-normal">Desconta da última parcela</span>
-                      </button>
-                    </div>
-                  )}
-                />
+          {modoAjuste === "encargos" ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Juros / Multa (+ R$)</Label>
+                  <Controller
+                    name="valorJuros"
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                      <NumericFormat
+                        value={value ?? 0}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        decimalScale={2}
+                        fixedDecimalScale
+                        allowNegative={false}
+                        onValueChange={(v) => onChange(v.floatValue || 0)}
+                        customInput={Input}
+                        className="bg-black/40 border-white/15 tabular-nums"
+                      />
+                    )}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Desconto (- R$)</Label>
+                  <Controller
+                    name="valorDesconto"
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                      <NumericFormat
+                        value={value ?? 0}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        decimalScale={2}
+                        fixedDecimalScale
+                        allowNegative={false}
+                        onValueChange={(v) => onChange(v.floatValue || 0)}
+                        customInput={Input}
+                        className="bg-black/40 border-white/15 tabular-nums"
+                      />
+                    )}
+                  />
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label>Conta</Label>
-            <Controller
-              name="contaId"
-              control={control}
-              render={({ field }) => (
-                <Select 
-                  key={`select-conta-${contas?.length || 0}-${field.value}`}
-                  onValueChange={(val) => field.onChange(val ? Number(val) : null)} 
-                  value={field.value?.toString() || ""}
-                >
-                  <SelectTrigger className={`bg-black/40 border-border/50 ${errors.contaId ? 'border-red-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione a conta">
-                      {field.value 
-                        ? contas?.find(c => c.id === field.value)?.nome 
-                        : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="glass-panel border-border/40">
-                    {contas?.map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/20 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Total a {tipo === "A_RECEBER" ? "creditar" : "debitar"}
+                  </div>
+                  <div className="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                    <CheckCircle2 size={12} />
+                    Quita integralmente sem alterar parcelas futuras
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-foreground tabular-nums">
+                  {fmtBRL(totalComEncargos)}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label className="text-xs">Valor pago / recebido (R$)</Label>
+              <Controller
+                name="valorPago"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <NumericFormat
+                    value={value || ""}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="R$ "
+                    decimalScale={2}
+                    fixedDecimalScale
+                    allowNegative={false}
+                    onValueChange={(v) => onChange(v.floatValue || 0)}
+                    customInput={Input}
+                    className="bg-black/40 text-base font-bold border-white/15 tabular-nums"
+                  />
+                )}
+              />
+              {isPartial && (
+                <p className="text-amber-300 text-xs flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Saldo residual de {fmtBRL(parcela.valor - valorPagoWatch)} continuará pendente.
+                </p>
               )}
-            />
-            {errors.contaId && <p className="text-red-400 text-xs">{errors.contaId.message}</p>}
+              {isSurplus && (
+                <div className="p-3 rounded-xl bg-white/5 border border-white/15 space-y-2">
+                  <p className="text-xs text-foreground font-medium">
+                    Excedente de {fmtBRL(valorPagoWatch - parcela.valor)} — abater de:
+                  </p>
+                  <Controller
+                    name="descontarExcedenteDe"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("PROXIMA")}
+                          className={`p-2 rounded-lg text-xs border transition-colors ${
+                            field.value !== "ULTIMA"
+                              ? "bg-primary text-primary-foreground border-primary font-semibold"
+                              : "bg-black/30 border-white/10 text-muted-foreground"
+                          }`}
+                        >
+                          Próxima Parcela
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("ULTIMA")}
+                          className={`p-2 rounded-lg text-xs border transition-colors ${
+                            field.value === "ULTIMA"
+                              ? "bg-primary text-primary-foreground border-primary font-semibold"
+                              : "bg-black/30 border-white/10 text-muted-foreground"
+                          }`}
+                        >
+                          Última Parcela
+                        </button>
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Conta</Label>
+              <Controller
+                name="contaId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={(val) => field.onChange(val ? Number(val) : null)}
+                    value={field.value?.toString() || ""}
+                  >
+                    <SelectTrigger className="bg-black/40 border-white/15">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-panel border-white/15">
+                      {contas?.map((c) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>
+                          {c.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.contaId && <p className="text-red-400 text-xs">{errors.contaId.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Data do Pagamento</Label>
+              <Input
+                type="date"
+                className="bg-black/40 border-white/15"
+                {...register("dataPagamento")}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Data do Pagamento</Label>
-            <Input
-              type="date"
-              className="bg-black/40 border-border/50"
-              {...register("dataPagamento")}
-            />
-            {errors.dataPagamento && <p className="text-red-400 text-xs">{errors.dataPagamento.message}</p>}
-          </div>
-
-          <DialogFooter className="mt-6 gap-2 sm:gap-0">
+          <DialogFooter className="pt-2 gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="bg-transparent border-border/50 hover:bg-white/5"
+              disabled={pagarMutation.isPending}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={pagarMutation.isPending}
-              className={`${tipo === 'A_RECEBER' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+              disabled={pagarMutation.isPending || (modoAjuste === "encargos" && totalComEncargos <= 0)}
+              className="bg-primary text-primary-foreground hover:opacity-90 font-semibold"
             >
-              {pagarMutation.isPending ? "Processando..." : (tipo === 'A_RECEBER' ? "Confirmar Recebimento" : "Confirmar Pagamento")}
+              {pagarMutation.isPending ? "Processando..." : "Confirmar Baixa"}
             </Button>
           </DialogFooter>
         </form>

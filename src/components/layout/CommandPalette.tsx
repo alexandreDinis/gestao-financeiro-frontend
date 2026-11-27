@@ -142,9 +142,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       },
       {
         id: "dividas",
-        label: "Pessoas & Dívidas",
+        label: "Boletos, Parcelamentos & Dívidas",
         group: "Patrimônio",
-        keywords: "emprestimos parcelas pessoas dividas pdf",
+        keywords: "boletos carnes financiamentos emprestimos parcelas pessoas dividas pdf",
         icon: Users,
         action: () => router.push("/dividas"),
       },

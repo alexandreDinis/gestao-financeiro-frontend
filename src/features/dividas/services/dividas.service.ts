@@ -37,6 +37,18 @@ export const DividasService = {
     return data.data;
   },
 
+  atualizarLinhaDigitavel: async (parcelaId: number, linhaDigitavel: string): Promise<any> => {
+    const { data } = await api.patch(`/dividas/parcelas/${parcelaId}/linha-digitavel`, {
+      linhaDigitavel,
+    });
+    return data.data;
+  },
+
+  registrarAmortizacao: async (dividaId: number, request: PagarParcelaRequest): Promise<any> => {
+    const { data } = await api.post(`/dividas/${dividaId}/amortizacoes`, request);
+    return data.data;
+  },
+
   pagarMultiplasParcelas: async (request: PagarMultiplasParcelasRequest): Promise<any> => {
     const { data } = await api.put("/dividas/parcelas/pagar-lote", request);
     return data.data;
