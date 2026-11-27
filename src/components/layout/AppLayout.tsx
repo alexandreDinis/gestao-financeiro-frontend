@@ -49,7 +49,7 @@ const navGroups = [
       { name: "Bancos & Saldos", href: "/bancos", icon: Wallet },
       { name: "Orçamentos", href: "/orcamentos", icon: Target },
       { name: "Categorias", href: "/categorias", icon: Tags },
-      { name: "Pessoas & Dívidas", href: "/dividas", icon: Users },
+      { name: "Boletos & Dívidas", href: "/dividas", icon: Users },
       { name: "Configurações", href: "/configuracoes", icon: Settings },
     ],
   },

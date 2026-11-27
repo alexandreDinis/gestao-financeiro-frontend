@@ -101,6 +101,14 @@ export function ConfirmarPagamentoVencimentoDialog({
           valorPago: data.valor,
           dataPagamento: data.dataPagamento
         });
+      } else if (idUnico.startsWith("SALDO-ABERTO-")) {
+        // Format: SALDO-ABERTO-{dividaId}-{YYYY}-{MM}
+        const dividaId = vencimento.parcelaId || Number(idUnico.split("-")[2]);
+        await api.post(`/dividas/${dividaId}/amortizacoes`, {
+          contaId: data.contaId,
+          valorPago: data.valor,
+          dataPagamento: data.dataPagamento
+        });
       } else if (idUnico.startsWith("FATURA-")) {
         await api.put(`/cartoes/faturas/${vencimento.parcelaId}/pagar`, {
           contaId: data.contaId,
@@ -139,6 +147,8 @@ export function ConfirmarPagamentoVencimentoDialog({
       toast.success("Pagamento registrado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       queryClient.invalidateQueries({ queryKey: ["vencimentos-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["dividas"] });
+      queryClient.invalidateQueries({ queryKey: ["previsao-caixa"] });
       onOpenChange(false);
       reset();
     } catch (error: any) {

@@ -205,3 +205,41 @@ export function useCancelarRecorrenciaMutation() {
     }
   });
 }
+
+export function useAtualizarLinhaDigitavelMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ parcelaId, linhaDigitavel }: { parcelaId: number; linhaDigitavel: string }) =>
+      DividasService.atualizarLinhaDigitavel(parcelaId, linhaDigitavel),
+    onSuccess: () => {
+      toast.success("Código salvo", "Linha digitável da parcela atualizada.");
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível salvar a linha digitável.");
+    }
+  });
+}
+
+export function useRegistrarAmortizacaoMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ dividaId, request }: { dividaId: number; request: PagarParcelaRequest }) =>
+      DividasService.registrarAmortizacao(dividaId, request),
+    onSuccess: () => {
+      toast.success("Amortização registrada", "O pagamento foi lançado no extrato e abatido do saldo devedor.");
+      queryClient.invalidateQueries({ queryKey: [DIVIDAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: [PESSOAS_QUERY_KEY, user?.tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["previsao-caixa"] });
+      queryClient.invalidateQueries({ queryKey: ["contas"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro", error.response?.data?.message || "Não foi possível registrar a amortização.");
+    }
+  });
+}

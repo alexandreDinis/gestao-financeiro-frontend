@@ -35,13 +35,16 @@ import { usePessoasQuery } from "@/features/pessoas/hooks/use-pessoas-query";
 import { PessoaFormDialog } from "@/features/pessoas/components/pessoa-form-dialog";
 import { RefreshCw } from "lucide-react";
 import { toast } from "@/lib/toast";
-import { Divida } from "../types";
+import { Divida, ModalidadeDivida } from "../types";
 
 interface FormValues {
   pessoaId?: number;
   categoriaId?: number;
   descricao: string;
   tipo: "A_RECEBER" | "A_PAGAR";
+  modalidade: ModalidadeDivida;
+  credor?: string;
+  linhaDigitavelInicial?: string;
   valorTotal: number;
   dataInicio: string;
   parcelasCount: number;
@@ -86,6 +89,9 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
       categoriaId: undefined,
       descricao: "",
       tipo: tipoDefault,
+      modalidade: tipoDefault === "A_RECEBER" ? "EMPRESTIMO" : "BOLETO",
+      credor: "",
+      linhaDigitavelInicial: "",
       valorTotal: 0,
       dataInicio: format(new Date(), "yyyy-MM-dd"),
       parcelasCount: 1,
@@ -111,6 +117,9 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
           categoriaId: dividaToEdit.categoriaId || undefined,
           descricao: dividaToEdit.descricao || "",
           tipo: dividaToEdit.tipo || tipoDefault,
+          modalidade: dividaToEdit.modalidade || (dividaToEdit.pessoaId ? "EMPRESTIMO" : "BOLETO"),
+          credor: dividaToEdit.credor || "",
+          linhaDigitavelInicial: dividaToEdit.parcelas?.[0]?.linhaDigitavel || "",
           valorTotal: isRec ? valorMensalRecorrente : (dividaToEdit.valorTotal || 0),
           dataInicio: dividaToEdit.dataInicio || format(new Date(), "yyyy-MM-dd"),
           parcelasCount: dividaToEdit.totalParcelas || 1,
@@ -125,6 +134,9 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
           categoriaId: undefined,
           descricao: "",
           tipo: tipoDefault,
+          modalidade: tipoDefault === "A_RECEBER" ? "EMPRESTIMO" : "BOLETO",
+          credor: "",
+          linhaDigitavelInicial: "",
           valorTotal: 0,
           dataInicio: format(new Date(), "yyyy-MM-dd"),
           parcelasCount: 1,
@@ -204,6 +216,9 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
       categoriaId: values.categoriaId,
       descricao: values.descricao,
       tipo: values.tipo,
+      modalidade: values.modalidade,
+      credor: values.credor?.trim() || null,
+      linhaDigitavelInicial: values.linhaDigitavelInicial?.trim() || null,
       valorTotal: values.valorTotal,
       dataInicio: values.dataInicio,
       dataFim: values.dataFim || null,
@@ -253,7 +268,7 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
           <DialogHeader>
             <DialogTitle className="text-white text-xl flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${form.watch("tipo") === "A_RECEBER" ? "bg-green-500" : "bg-red-500"}`} />
-              {isEditing ? "Editar Empréstimo / Dívida" : "Registrar Empréstimo / Dívida"}
+              {isEditing ? "Editar Compromisso / Boleto" : "Novo Boleto, Parcelamento ou Dívida"}
             </DialogTitle>
           </DialogHeader>
 
@@ -262,6 +277,94 @@ export function DividaFormDialog({ open, onOpenChange, tipoDefault = "A_RECEBER"
               e.preventDefault();
               onSubmit(form.getValues());
             }} className="space-y-4 py-2">
+
+              {/* Modalidade */}
+              <FormField
+                control={form.control}
+                name="modalidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalidade</FormLabel>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {(
+                        [
+                          { value: "BOLETO", label: "Boleto / Carnê" },
+                          { value: "FINANCIAMENTO", label: "Financiamento" },
+                          { value: "EMPRESTIMO", label: "Pessoa (Fixo)" },
+                          { value: "SALDO_ABERTO", label: "Saldo Aberto" },
+                          { value: "OUTROS", label: "Outros" },
+                        ] as const
+                      ).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            field.onChange(opt.value);
+                            if (opt.value === "SALDO_ABERTO") {
+                              form.setValue("recorrente", false);
+                              form.setValue("parcelasCount", 1);
+                            }
+                          }}
+                          className={`px-2.5 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                            field.value === opt.value
+                              ? "bg-primary text-primary-foreground border-primary font-semibold"
+                              : "bg-black/40 border-white/10 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {field.value === "SALDO_ABERTO" && (
+                      <p className="text-[11px] text-sky-300 mt-1">
+                        Amortização livre: sem parcelas fixas. Você registra qualquer valor pago/recebido no extrato e o saldo abate automaticamente.
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* Credor / Instituição + Linha Digitável Inicial */}
+              {form.watch("modalidade") !== "EMPRESTIMO" && form.watch("modalidade") !== "SALDO_ABERTO" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="credor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Credor / Instituição (opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Banco Santander, FIAP, Loja..."
+                            className="bg-black/40 border-border/50 text-white"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {!isEditing && (
+                    <FormField
+                      control={form.control}
+                      name="linhaDigitavelInicial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Linha Digitável 1ª Parcela (opcional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Cole o código de barras do boleto"
+                              className="bg-black/40 border-border/50 text-white font-mono text-xs"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

@@ -1,4 +1,5 @@
 export type TipoDivida = 'A_RECEBER' | 'A_PAGAR';
+export type ModalidadeDivida = 'BOLETO' | 'FINANCIAMENTO' | 'CARNE' | 'EMPRESTIMO' | 'SALDO_ABERTO' | 'OUTROS';
 export type StatusDivida = 'PENDENTE' | 'PAGA' | 'ATRASADA';
 export type StatusTransacao = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 export type Periodicidade = 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'ANUAL';
@@ -13,6 +14,9 @@ export interface ParcelaDivida {
   status: StatusTransacao;
   dataPagamento?: string;
   transacaoGeradaId?: number;
+  linhaDigitavel?: string | null;
+  valorJuros?: number;
+  valorDesconto?: number;
 }
 
 export interface Divida {
@@ -25,6 +29,8 @@ export interface Divida {
   descricao: string;
   nomeDivida?: string;
   tipo: TipoDivida;
+  modalidade?: ModalidadeDivida;
+  credor?: string | null;
   valorTotal: number;
   valorRestante: number;
   dataInicio: string;
@@ -45,6 +51,9 @@ export interface DividaRequest {
   categoriaId?: number;
   descricao: string;
   tipo: TipoDivida;
+  modalidade?: ModalidadeDivida;
+  credor?: string | null;
+  linhaDigitavelInicial?: string | null;
   valorTotal: number;
   dataInicio: string;
   dataFim?: string | null;
@@ -58,10 +67,13 @@ export interface DividaRequest {
 
 export interface PagarParcelaRequest {
   contaId: number;
-  categoriaId?: number; 
-  dataPagamento?: string; 
-  valorPago?: number; 
+  categoriaId?: number;
+  dataPagamento?: string;
+  valorPago?: number;
   descontarExcedenteDe?: 'PROXIMA' | 'ULTIMA';
+  valorJuros?: number;
+  valorDesconto?: number;
+  linhaDigitavel?: string | null;
 }
 
 export interface PagarMultiplasParcelasRequest {
@@ -77,4 +89,3 @@ export interface DividasResumo {
   totalGeral: number;
   totalItems: number;
 }
-
